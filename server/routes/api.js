@@ -26,11 +26,12 @@ function buildRouter(db) {
     if (!name || !doordash_url) {
       return res.status(400).json({ error: 'name and doordash_url required' });
     }
+    const existing = db.prepare('SELECT id FROM restaurants WHERE id = ?').get(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'not found' });
     db.prepare(
       'UPDATE restaurants SET name = ?, cuisine = ?, doordash_url = ? WHERE id = ?'
     ).run(name, cuisine || null, doordash_url, req.params.id);
     const row = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(req.params.id);
-    if (!row) return res.status(404).json({ error: 'not found' });
     res.json(row);
   });
 

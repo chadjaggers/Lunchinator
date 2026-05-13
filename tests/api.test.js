@@ -70,4 +70,9 @@ describe('REST API', () => {
     const res = await request(app).post('/api/restaurants').send({ name: 'Missing URL' });
     expect(res.status).toBe(400);
   });
+
+  it('PUT /api/restaurants/:id returns 404 for non-existent id', async () => {
+    const res = await request(app).put('/api/restaurants/9999').send({ name: 'Ghost', doordash_url: 'https://x.com' });
+    expect(res.status).toBe(404);
+  });
 });
