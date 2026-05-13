@@ -1,0 +1,29 @@
+{
+  "name": "lunchinator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@slack/bolt": "^4.7.2",
+    "better-sqlite3": "^12.10.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.6",
+    "vitest": "^4.1.6"
+  }
+}
