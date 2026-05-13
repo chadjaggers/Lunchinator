@@ -19,6 +19,7 @@ function registerActions(app) {
       if (!session) return;
 
       const restaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(session.restaurant_id);
+      if (!restaurant) return;
       const rsvpCount = db.prepare('SELECT COUNT(*) as count FROM rsvps WHERE session_id = ?').get(sessionId).count;
 
       await client.chat.update({
@@ -42,7 +43,13 @@ function registerActions(app) {
 
       // Pick a different restaurant
       const rows = db.prepare('SELECT * FROM restaurants WHERE id != ?').all(session.restaurant_id);
-      if (!rows.length) return;
+      if (!rows.length) {
+        await client.chat.postMessage({
+          channel: session.slack_channel_id,
+          text: "There's only one restaurant in the list — can't spin again! Add more restaurants with `/lunchinator add`.",
+        });
+        return;
+      }
       const restaurant = rows[Math.floor(Math.random() * rows.length)];
 
       // Update session to new restaurant, reset RSVPs

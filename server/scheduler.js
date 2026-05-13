@@ -33,18 +33,19 @@ function startScheduler(slackClient) {
         }
       }
 
-      // Post "time's up" for sessions that just expired (within the last minute)
-      const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+      // Sessions past deadline that haven't been notified yet
       const expired = db.prepare(`
         SELECT ls.*, r.name
         FROM lunch_sessions ls
         JOIN restaurants r ON r.id = ls.restaurant_id
         WHERE ls.slack_channel_id IS NOT NULL
           AND ls.deadline_at <= ?
-          AND ls.deadline_at > ?
-      `).all(now, oneMinuteAgo);
+          AND ls.times_up_sent_at IS NULL
+      `).all(now);
 
       for (const session of expired) {
+        // Mark as notified FIRST to prevent re-send on error
+        db.prepare('UPDATE lunch_sessions SET times_up_sent_at = ? WHERE id = ?').run(now, session.id);
         try {
           await slackClient.chat.postMessage({
             channel: session.slack_channel_id,

@@ -31,6 +31,7 @@ function initDb(dbPath) {
       deadline_at TEXT NOT NULL,
       slack_message_ts TEXT,
       slack_channel_id TEXT,
+      times_up_sent_at TEXT,
       picked_at TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS rsvps (
@@ -41,6 +42,11 @@ function initDb(dbPath) {
       UNIQUE(session_id, slack_user_id)
     );
   `);
+  try {
+    db.exec("ALTER TABLE lunch_sessions ADD COLUMN times_up_sent_at TEXT");
+  } catch {
+    // Column already exists — safe to ignore
+  }
   const existing = db.prepare("SELECT key FROM settings WHERE key = 'default_deadline_minutes'").get();
   if (!existing) {
     db.prepare("INSERT INTO settings (key, value) VALUES ('default_deadline_minutes', '30')").run();

@@ -4,14 +4,19 @@ const { buildLunchCard } = require('./messages');
 function registerModals(app) {
   // Provides options for the external_select restaurant picker in the modal
   app.options({ action_id: 'restaurant_input' }, async ({ options, ack }) => {
-    const db = getDb();
-    const rows = db.prepare('SELECT id, name FROM restaurants ORDER BY name').all();
-    await ack({
-      options: rows.map(r => ({
-        text: { type: 'plain_text', text: r.name },
-        value: String(r.id),
-      })),
-    });
+    try {
+      const db = getDb();
+      const rows = db.prepare('SELECT id, name FROM restaurants ORDER BY name').all();
+      await ack({
+        options: rows.map(r => ({
+          text: { type: 'plain_text', text: r.name },
+          value: String(r.id),
+        })),
+      });
+    } catch (err) {
+      console.error('restaurant_input options error:', err);
+      await ack({ options: [] });
+    }
   });
 
   // Modal submission handler
