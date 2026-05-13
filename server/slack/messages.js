@@ -1,12 +1,12 @@
 function formatDeadline(deadlineAt) {
+  if (!deadlineAt) return '⏱ Deadline unknown';
   const deadline = new Date(deadlineAt);
-  const now = new Date();
-  const diffMs = deadline - now;
-  const diffMin = Math.max(0, Math.round(diffMs / 60000));
+  if (isNaN(deadline.getTime())) return '⏱ Deadline unknown';
+  const diffMs = deadline - new Date();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin <= 0) return '⏱ Order deadline passed';
   const timeStr = deadline.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  return diffMin > 0
-    ? `⏱ Order by ${timeStr} (${diffMin} min left)`
-    : `⏱ Order deadline passed`;
+  return `⏱ Order by ${timeStr} (${diffMin} min left)`;
 }
 
 function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode }) {
@@ -27,6 +27,7 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode }) 
       elements: [
         {
           type: 'button',
+          action_id: 'open_doordash',
           text: { type: 'plain_text', text: '🛒 Open DoorDash Group Order' },
           url: restaurant.doordash_url,
           style: 'primary',
