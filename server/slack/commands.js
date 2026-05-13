@@ -3,52 +3,62 @@ const { getDb } = require('../db');
 function registerCommands(app) {
   app.command('/lunchinator', async ({ command, ack, respond, client }) => {
     await ack();
-    const [subcommand, ...args] = command.text.trim().split(/\s+/);
+    try {
+      const [subcommand, ...args] = command.text.trim().split(/\s+/);
 
-    if (!subcommand || subcommand === 'spin') {
-      const db = getDb();
-      const setting = db.prepare("SELECT value FROM settings WHERE key = 'default_deadline_minutes'").get();
-      const defaultMinutes = setting ? setting.value : '30';
-      await client.views.open({
-        trigger_id: command.trigger_id,
-        view: buildSpinModal(defaultMinutes),
-      });
-      return;
-    }
-
-    if (subcommand === 'add') {
-      const [name, doordash_url] = args;
-      if (!name || !doordash_url) {
-        return respond('Usage: `/lunchinator add "Restaurant Name" https://doordash-group-link`');
+      if (!subcommand || subcommand === 'spin') {
+        const db = getDb();
+        const setting = db.prepare("SELECT value FROM settings WHERE key = 'default_deadline_minutes'").get();
+        const defaultMinutes = setting ? setting.value : '30';
+        await client.views.open({
+          trigger_id: command.trigger_id,
+          view: buildSpinModal(defaultMinutes),
+        });
+        return;
       }
-      const db = getDb();
-      db.prepare('INSERT INTO restaurants (name, doordash_url) VALUES (?, ?)').run(name.replace(/"/g, ''), doordash_url);
-      return respond(`✅ Added *${name.replace(/"/g, '')}* to the list.`);
-    }
 
-    if (subcommand === 'remove') {
-      const name = args.join(' ').replace(/"/g, '');
-      const db = getDb();
-      const row = db.prepare('SELECT id FROM restaurants WHERE name = ?').get(name);
-      if (!row) return respond(`❌ No restaurant named "${name}" found.`);
-      db.prepare('DELETE FROM restaurants WHERE id = ?').run(row.id);
-      return respond(`🗑️ Removed *${name}* from the list.`);
-    }
+      if (subcommand === 'add') {
+        // Last arg is the URL, everything before it is the name
+        if (args.length < 2) {
+          return respond('Usage: `/lunchinator add Restaurant Name https://doordash-group-link`');
+        }
+        const doordash_url = args[args.length - 1];
+        const name = args.slice(0, args.length - 1).join(' ').replace(/"/g, '');
+        if (!name || !doordash_url.startsWith('http')) {
+          return respond('Usage: `/lunchinator add Restaurant Name https://doordash-group-link`');
+        }
+        const db = getDb();
+        db.prepare('INSERT INTO restaurants (name, doordash_url) VALUES (?, ?)').run(name, doordash_url);
+        return respond(`✅ Added *${name}* to the list.`);
+      }
 
-    if (subcommand === 'list') {
-      const db = getDb();
-      const rows = db.prepare('SELECT name, cuisine FROM restaurants ORDER BY name').all();
-      if (!rows.length) return respond('No restaurants yet. Add one with `/lunchinator add "Name" [doordash-url]`');
-      const list = rows.map(r => `• *${r.name}*${r.cuisine ? ` — ${r.cuisine}` : ''}`).join('\n');
-      return respond(`*Current restaurant list:*\n${list}`);
-    }
+      if (subcommand === 'remove') {
+        const name = args.join(' ').replace(/"/g, '');
+        const db = getDb();
+        const row = db.prepare('SELECT id FROM restaurants WHERE name = ?').get(name);
+        if (!row) return respond(`❌ No restaurant named "${name}" found.`);
+        db.prepare('DELETE FROM restaurants WHERE id = ?').run(row.id);
+        return respond(`🗑️ Removed *${name}* from the list.`);
+      }
 
-    if (subcommand === 'admin') {
-      const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
-      return respond(`🔧 Manage restaurants and settings: ${adminUrl}`);
-    }
+      if (subcommand === 'list') {
+        const db = getDb();
+        const rows = db.prepare('SELECT name, cuisine FROM restaurants ORDER BY name').all();
+        if (!rows.length) return respond('No restaurants yet. Add one with `/lunchinator add "Name" [doordash-url]`');
+        const list = rows.map(r => `• *${r.name}*${r.cuisine ? ` — ${r.cuisine}` : ''}`).join('\n');
+        return respond(`*Current restaurant list:*\n${list}`);
+      }
 
-    await respond('Unknown command. Try: `spin`, `add`, `remove`, `list`, `admin`');
+      if (subcommand === 'admin') {
+        const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
+        return respond(`🔧 Manage restaurants and settings: ${adminUrl}`);
+      }
+
+      await respond('Unknown command. Try: `spin`, `add`, `remove`, `list`, `admin`');
+    } catch (err) {
+      console.error('Lunchinator command error:', err);
+      await respond('❌ Something went wrong. Please try again.');
+    }
   });
 }
 
