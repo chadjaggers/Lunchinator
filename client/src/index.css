@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+:root {
+  --abyss: #00233A;
+  --indigo: #1A3B6F;
+  --cyan: #16A3D6;
+  --ice: #9AE4FF;
+  --coral: #F5543A;
+}
+
+body {
+  background-color: var(--abyss);
+  color: #f8fafc;
+  font-family: 'Sora', sans-serif;
+}
+
+h1, h2, h3 { font-family: 'Manrope', sans-serif; }
