@@ -8,19 +8,28 @@ export default function App() {
   const [restaurants, setRestaurants] = useState([]);
   const [settings, setSettings] = useState({});
   const [showAdd, setShowAdd] = useState(false);
+  const [error, setError] = useState(null);
 
   async function refresh() {
-    const [r, s] = await Promise.all([getRestaurants(), getSettings()]);
-    setRestaurants(r);
-    setSettings(s);
+    try {
+      const [r, s] = await Promise.all([getRestaurants(), getSettings()]);
+      setRestaurants(r);
+      setSettings(s);
+    } catch {
+      setError('Failed to load data. Is the server running?');
+    }
   }
 
   useEffect(() => { refresh(); }, []);
 
   async function handleAdd(data) {
-    await addRestaurant(data);
-    setShowAdd(false);
-    refresh();
+    try {
+      await addRestaurant(data);
+      setShowAdd(false);
+      refresh();
+    } catch {
+      setError('Failed to add restaurant. Please try again.');
+    }
   }
 
   return (
@@ -31,6 +40,13 @@ export default function App() {
       <p className="text-slate-400 mb-8">
         Admin — manage restaurants and settings
       </p>
+
+      {error && (
+        <div className="bg-[var(--coral)] bg-opacity-20 border border-[var(--coral)] text-[var(--coral)] rounded px-4 py-3 mb-6 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-4 font-bold">✕</button>
+        </div>
+      )}
 
       <section className="mb-10">
         <h2 className="text-xl font-semibold text-white mb-4">Settings</h2>

@@ -54,12 +54,14 @@ export default function RestaurantList({ restaurants, onRefresh }) {
               <div className="flex gap-3 shrink-0">
                 <button
                   onClick={() => setEditingId(r.id)}
+                  aria-label={`Edit ${r.name}`}
                   className="text-sm text-[var(--cyan)] hover:underline"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(r.id)}
+                  aria-label={`Remove ${r.name}`}
                   className="text-sm text-[var(--coral)] hover:underline"
                 >
                   Remove

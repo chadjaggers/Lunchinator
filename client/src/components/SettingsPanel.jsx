@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { updateSettings } from '../api';
 
 export default function SettingsPanel({ settings, onRefresh }) {
   const [minutes, setMinutes] = useState(settings.default_deadline_minutes || '30');
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (settings.default_deadline_minutes) {
+      setMinutes(settings.default_deadline_minutes);
+    }
+  }, [settings.default_deadline_minutes]);
 
   async function handleSave(e) {
     e.preventDefault();
@@ -16,10 +22,11 @@ export default function SettingsPanel({ settings, onRefresh }) {
   return (
     <form onSubmit={handleSave} className="flex items-end gap-3">
       <div className="flex flex-col gap-1">
-        <label className="text-sm text-slate-400">
+        <label htmlFor="deadline-minutes" className="text-sm text-slate-400">
           Default order deadline (minutes)
         </label>
         <input
+          id="deadline-minutes"
           type="number"
           min="1"
           max="180"
