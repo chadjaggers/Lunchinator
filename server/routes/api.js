@@ -1,2 +1,7 @@
 const express = require('express');
-module.exports = function() { return express.Router(); };
+
+function buildRouter(db) {
+  return express.Router();
+}
+
+module.exports = buildRouter;
