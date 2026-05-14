@@ -1,4 +1,6 @@
 const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 
 let db;
 
@@ -9,6 +11,7 @@ function getDb() {
 
 function initDb(dbPath) {
   const resolvedPath = dbPath || process.env.DATABASE_PATH || './lunchinator.db';
+  fs.mkdirSync(path.dirname(path.resolve(resolvedPath)), { recursive: true });
   db = new Database(resolvedPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS restaurants (
