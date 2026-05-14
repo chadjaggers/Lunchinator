@@ -22,7 +22,7 @@ const expressApp = express();
 expressApp.use(express.json());
 expressApp.use('/api', buildApiRoutes(db));
 expressApp.use(express.static(path.join(__dirname, '../client/dist')));
-expressApp.get('*', (req, res) => {
+expressApp.get('/{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
