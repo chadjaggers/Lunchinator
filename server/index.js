@@ -7,6 +7,7 @@ const buildApiRoutes = require('./routes/api');
 const registerCommands = require('./slack/commands');
 const registerModals = require('./slack/modals');
 const registerActions = require('./slack/actions');
+const { registerManage } = require('./slack/manage');
 const { startScheduler } = require('./scheduler');
 
 const db = initDb();
@@ -29,6 +30,7 @@ expressApp.get('/{*path}', (req, res) => {
 registerCommands(app);
 registerModals(app);
 registerActions(app);
+registerManage(app);
 
 (async () => {
   await app.start();

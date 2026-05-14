@@ -1,4 +1,5 @@
 const { getDb } = require('../db');
+const { buildManageModal } = require('./manage');
 
 function registerCommands(app) {
   app.command('/lunchinator', async ({ command, ack, respond, client }) => {
@@ -45,8 +46,12 @@ function registerCommands(app) {
       }
 
       if (subcommand === 'admin') {
-        const adminUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
-        return respond(`🔧 Manage restaurants and settings: ${adminUrl}`);
+        const db = getDb();
+        await client.views.open({
+          trigger_id: command.trigger_id,
+          view: buildManageModal(db),
+        });
+        return;
       }
 
       await respond('Unknown command. Try: `spin`, `add`, `remove`, `list`, `admin`');
