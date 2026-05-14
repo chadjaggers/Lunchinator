@@ -1,0 +1,18 @@
+name: Sync to titanium/lunchinator
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to titanium/lunchinator
+        run: |
+          git remote add titanium https://titanium:${{ secrets.TITANIUM_TOKEN }}@github.com/titanium/lunchinator.git
+          git push titanium master
