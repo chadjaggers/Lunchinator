@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { App } = require('@slack/bolt');
 const express = require('express');
+const basicAuth = require('express-basic-auth');
 const path = require('path');
 const { initDb } = require('./db');
 const buildApiRoutes = require('./routes/api');
@@ -19,11 +20,17 @@ const app = new App({
   appToken: process.env.SLACK_APP_TOKEN,
 });
 
+const adminAuth = basicAuth({
+  users: { [process.env.ADMIN_USER || 'admin']: process.env.ADMIN_PASSWORD || 'changeme' },
+  challenge: true,
+  realm: 'Lunchinator Admin',
+});
+
 const expressApp = express();
 expressApp.use(express.json());
-expressApp.use('/api', buildApiRoutes(db));
-expressApp.use(express.static(path.join(__dirname, '../client/dist')));
-expressApp.get('/{*path}', (req, res) => {
+expressApp.use('/api', adminAuth, buildApiRoutes(db));
+expressApp.use(adminAuth, express.static(path.join(__dirname, '../client/dist')));
+expressApp.get('/{*path}', adminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
