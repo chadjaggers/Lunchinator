@@ -36,7 +36,7 @@ export default function App() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
       <header style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <span className="text-2xl">🍽️</span>
+          <img src="/burgerlogo.png" alt="Lunchinator" className="h-10 w-10 object-contain" />
           <div>
             <h1 className="text-xl font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif' }}>
               Lunchinator
