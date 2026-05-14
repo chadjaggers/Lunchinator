@@ -2,6 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Build tools required by better-sqlite3 (native addon)
+RUN apk add --no-cache python3 make g++
+
 # Install server deps
 COPY package*.json ./
 RUN npm ci --omit=dev
