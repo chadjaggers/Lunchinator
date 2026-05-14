@@ -11,25 +11,48 @@ export default function RestaurantForm({ initial = {}, onSave, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <input
-        required
-        aria-label="Restaurant name"
-        value={name}
-        onChange={e => setName(e.target.value)}
-        placeholder="Restaurant name"
-        className="bg-[var(--indigo)] border border-[var(--cyan)] rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--cyan)]"
-      />
-      <input
-        aria-label="Cuisine type"
-        value={cuisine}
-        onChange={e => setCuisine(e.target.value)}
-        placeholder="Cuisine type (optional)"
-        className="bg-[var(--indigo)] border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--cyan)]"
-      />
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          Name <span style={{ color: 'var(--coral)' }}>*</span>
+        </label>
+        <input
+          required
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Chipotle"
+          className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
+          style={{
+            backgroundColor: 'var(--bg)',
+            border: '1px solid var(--border)',
+            color: '#f0f6fc',
+          }}
+          onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
+          onBlur={e => (e.target.style.boxShadow = 'none')}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+          Cuisine <span className="opacity-50 font-normal">(optional)</span>
+        </label>
+        <input
+          value={cuisine}
+          onChange={e => setCuisine(e.target.value)}
+          placeholder="e.g. Mexican"
+          className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
+          style={{
+            backgroundColor: 'var(--bg)',
+            border: '1px solid var(--border)',
+            color: '#f0f6fc',
+          }}
+          onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
+          onBlur={e => (e.target.style.boxShadow = 'none')}
+        />
+      </div>
+      <div className="flex gap-2 pt-1">
         <button
           type="submit"
-          className="bg-[var(--cyan)] text-white font-semibold px-4 py-2 rounded hover:opacity-90 transition-opacity"
+          className="text-sm font-semibold px-4 py-2 rounded-[8px] transition-opacity hover:opacity-80"
+          style={{ backgroundColor: 'var(--cyan)', color: '#fff' }}
         >
           Save
         </button>
@@ -37,7 +60,8 @@ export default function RestaurantForm({ initial = {}, onSave, onCancel }) {
           <button
             type="button"
             onClick={onCancel}
-            className="bg-slate-700 text-white px-4 py-2 rounded hover:opacity-90 transition-opacity"
+            className="text-sm px-4 py-2 rounded-[8px] transition-opacity hover:opacity-80"
+            style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
           >
             Cancel
           </button>

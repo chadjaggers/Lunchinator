@@ -33,50 +33,89 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
-      <h1 className="text-3xl font-bold text-[var(--ice)] mb-1">
-        🍽️ Lunchinator
-      </h1>
-      <p className="text-slate-400 mb-8">
-        Admin — manage restaurants and settings
-      </p>
-
-      {error && (
-        <div className="bg-[var(--coral)] bg-opacity-20 border border-[var(--coral)] text-[var(--coral)] rounded px-4 py-3 mb-6 flex justify-between items-center">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="ml-4 font-bold">✕</button>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
+      <header style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+          <span className="text-2xl">🍽️</span>
+          <div>
+            <h1 className="text-xl font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif' }}>
+              Lunchinator
+            </h1>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Admin Panel</p>
+          </div>
         </div>
-      )}
+      </header>
 
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold text-white mb-4">Settings</h2>
-        <SettingsPanel settings={settings} onRefresh={refresh} />
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-white">
-            Restaurants ({restaurants.length})
-          </h2>
-          <button
-            onClick={() => setShowAdd(v => !v)}
-            className="bg-[var(--cyan)] text-white font-semibold px-4 py-2 rounded hover:opacity-90 transition-opacity text-sm"
+      <main className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
+        {error && (
+          <div
+            className="flex items-center justify-between px-4 py-3 rounded-[10px] text-sm"
+            style={{ backgroundColor: 'rgba(245,84,58,0.12)', border: '1px solid var(--coral)', color: 'var(--coral)' }}
           >
-            {showAdd ? 'Cancel' : '+ Add Restaurant'}
-          </button>
-        </div>
-
-        {showAdd && (
-          <div className="bg-[var(--indigo)] rounded-lg p-4 mb-4">
-            <RestaurantForm
-              onSave={handleAdd}
-              onCancel={() => setShowAdd(false)}
-            />
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="ml-4 font-bold opacity-70 hover:opacity-100">✕</button>
           </div>
         )}
 
-        <RestaurantList restaurants={restaurants} onRefresh={refresh} />
-      </section>
+        <Card
+          title="Settings"
+          description="Configure default order deadline for lunch sessions"
+        >
+          <SettingsPanel settings={settings} onRefresh={refresh} />
+        </Card>
+
+        <Card
+          title={`Restaurants${restaurants.length ? ` (${restaurants.length})` : ''}`}
+          description="Manage the restaurant pool used for random and manual picks"
+          action={
+            <button
+              onClick={() => setShowAdd(v => !v)}
+              className="text-sm font-semibold px-4 py-1.5 rounded-[8px] transition-opacity hover:opacity-80"
+              style={{ backgroundColor: 'var(--cyan)', color: '#fff' }}
+            >
+              {showAdd ? 'Cancel' : '+ Add'}
+            </button>
+          }
+        >
+          {showAdd && (
+            <div
+              className="rounded-[8px] p-4 mb-4"
+              style={{ backgroundColor: 'var(--surface-raised)', border: '1px solid var(--border)' }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
+                New Restaurant
+              </p>
+              <RestaurantForm onSave={handleAdd} onCancel={() => setShowAdd(false)} />
+            </div>
+          )}
+          <RestaurantList restaurants={restaurants} onRefresh={refresh} />
+        </Card>
+      </main>
+    </div>
+  );
+}
+
+function Card({ title, description, action, children }) {
+  return (
+    <div
+      className="rounded-[10px] overflow-hidden"
+      style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+    >
+      <div
+        className="px-5 py-4 flex items-start justify-between gap-4"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
+        <div>
+          <h2 className="font-bold text-base" style={{ color: '#f0f6fc', fontFamily: 'Manrope, sans-serif' }}>
+            {title}
+          </h2>
+          {description && (
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{description}</p>
+          )}
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      <div className="px-5 py-4">{children}</div>
     </div>
   );
 }

@@ -6,12 +6,19 @@
   --cyan: #16A3D6;
   --ice: #9AE4FF;
   --coral: #F5543A;
+  --pine: #1F4E52;
+  --bg: #001220;
+  --surface: #00233A;
+  --surface-raised: #0A2D47;
+  --border: #143350;
+  --text-muted: #6B8CAE;
 }
 
 body {
-  background-color: var(--abyss);
-  color: #f8fafc;
+  background-color: var(--bg);
+  color: #f0f6fc;
   font-family: 'Sora', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; }
