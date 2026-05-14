@@ -25,7 +25,7 @@ function registerActions(app) {
       await client.chat.update({
         channel: session.slack_channel_id,
         ts: session.slack_message_ts,
-        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId, mode: session.mode }),
+        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId, mode: session.mode, doordashUrl: session.doordash_url }),
         text: `Today's lunch: ${restaurant.name}`,
       });
     } catch (err) {
@@ -52,14 +52,14 @@ function registerActions(app) {
       }
       const restaurant = rows[Math.floor(Math.random() * rows.length)];
 
-      // Update session to new restaurant, reset RSVPs
-      db.prepare('UPDATE lunch_sessions SET restaurant_id = ? WHERE id = ?').run(restaurant.id, sessionId);
+      // Update session to new restaurant, clear DoorDash link, reset RSVPs
+      db.prepare('UPDATE lunch_sessions SET restaurant_id = ?, doordash_url = NULL WHERE id = ?').run(restaurant.id, sessionId);
       db.prepare('DELETE FROM rsvps WHERE session_id = ?').run(sessionId);
 
       await client.chat.update({
         channel: session.slack_channel_id,
         ts: session.slack_message_ts,
-        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount: 0, sessionId, mode: 'random' }),
+        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount: 0, sessionId, mode: 'random', doordashUrl: null }),
         text: `Today's lunch: ${restaurant.name}`,
       });
     } catch (err) {

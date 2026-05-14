@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { buildLunchCard } from '../server/slack/messages.js';
 
 const baseParams = {
-  restaurant: { name: 'Chipotle', cuisine: 'Mexican', doordash_url: 'https://doordash.com/group/abc' },
+  restaurant: { name: 'Chipotle', cuisine: 'Mexican' },
   deadlineAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
   rsvpCount: 0,
   sessionId: 1,
   mode: 'random',
+  doordashUrl: 'https://doordash.com/group/abc',
 };
 
 describe('buildLunchCard', () => {

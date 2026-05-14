@@ -9,7 +9,7 @@ function formatDeadline(deadlineAt) {
   return `⏱ Order by ${timeStr} (${diffMin} min left)`;
 }
 
-function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode }) {
+function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode, doordashUrl }) {
   const blocks = [
     {
       type: 'header',
@@ -25,13 +25,13 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode }) 
     {
       type: 'actions',
       elements: [
-        {
+        ...(doordashUrl ? [{
           type: 'button',
           action_id: 'open_doordash',
           text: { type: 'plain_text', text: '🛒 Open DoorDash Group Order' },
-          url: restaurant.doordash_url,
+          url: doordashUrl,
           style: 'primary',
-        },
+        }] : []),
         {
           type: 'button',
           action_id: 'rsvp',
@@ -46,6 +46,10 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode }) 
         }] : []),
       ],
     },
+    ...(doordashUrl ? [] : [{
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: '🛒 DoorDash group order link coming shortly — the organizer will share it here.' }],
+    }]),
   ];
   return blocks;
 }

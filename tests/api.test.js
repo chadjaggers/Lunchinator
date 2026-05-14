@@ -28,7 +28,7 @@ describe('REST API', () => {
 
   it('POST /api/restaurants creates a restaurant', async () => {
     const res = await request(app).post('/api/restaurants').send({
-      name: 'Chipotle', cuisine: 'Mexican', doordash_url: 'https://doordash.com/group/abc'
+      name: 'Chipotle', cuisine: 'Mexican',
     });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Chipotle');
@@ -36,7 +36,7 @@ describe('REST API', () => {
   });
 
   it('DELETE /api/restaurants/:id removes a restaurant', async () => {
-    await request(app).post('/api/restaurants').send({ name: 'Chipotle', cuisine: 'Mexican', doordash_url: 'https://x.com' });
+    await request(app).post('/api/restaurants').send({ name: 'Chipotle', cuisine: 'Mexican' });
     const list = await request(app).get('/api/restaurants');
     const id = list.body[0].id;
     const res = await request(app).delete(`/api/restaurants/${id}`);
@@ -58,21 +58,21 @@ describe('REST API', () => {
   });
 
   it('PUT /api/restaurants/:id updates a restaurant', async () => {
-    await request(app).post('/api/restaurants').send({ name: 'Chipotle', cuisine: 'Mexican', doordash_url: 'https://x.com' });
+    await request(app).post('/api/restaurants').send({ name: 'Chipotle', cuisine: 'Mexican' });
     const list = await request(app).get('/api/restaurants');
     const id = list.body[0].id;
-    const res = await request(app).put(`/api/restaurants/${id}`).send({ name: 'Chipotle Updated', cuisine: 'Tex-Mex', doordash_url: 'https://new.com' });
+    const res = await request(app).put(`/api/restaurants/${id}`).send({ name: 'Chipotle Updated', cuisine: 'Tex-Mex' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Chipotle Updated');
   });
 
   it('POST /api/restaurants returns 400 when missing required fields', async () => {
-    const res = await request(app).post('/api/restaurants').send({ name: 'Missing URL' });
+    const res = await request(app).post('/api/restaurants').send({});
     expect(res.status).toBe(400);
   });
 
   it('PUT /api/restaurants/:id returns 404 for non-existent id', async () => {
-    const res = await request(app).put('/api/restaurants/9999').send({ name: 'Ghost', doordash_url: 'https://x.com' });
+    const res = await request(app).put('/api/restaurants/9999').send({ name: 'Ghost' });
     expect(res.status).toBe(404);
   });
 });

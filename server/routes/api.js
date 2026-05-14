@@ -10,27 +10,27 @@ function buildRouter(db) {
   });
 
   router.post('/restaurants', (req, res) => {
-    const { name, cuisine, doordash_url } = req.body;
-    if (!name || !doordash_url) {
-      return res.status(400).json({ error: 'name and doordash_url required' });
+    const { name, cuisine } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'name required' });
     }
     const result = db.prepare(
-      'INSERT INTO restaurants (name, cuisine, doordash_url) VALUES (?, ?, ?)'
-    ).run(name, cuisine || null, doordash_url);
+      'INSERT INTO restaurants (name, cuisine) VALUES (?, ?)'
+    ).run(name, cuisine || null);
     const row = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(row);
   });
 
   router.put('/restaurants/:id', (req, res) => {
-    const { name, cuisine, doordash_url } = req.body;
-    if (!name || !doordash_url) {
-      return res.status(400).json({ error: 'name and doordash_url required' });
+    const { name, cuisine } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'name required' });
     }
     const existing = db.prepare('SELECT id FROM restaurants WHERE id = ?').get(req.params.id);
     if (!existing) return res.status(404).json({ error: 'not found' });
     db.prepare(
-      'UPDATE restaurants SET name = ?, cuisine = ?, doordash_url = ? WHERE id = ?'
-    ).run(name, cuisine || null, doordash_url, req.params.id);
+      'UPDATE restaurants SET name = ?, cuisine = ? WHERE id = ?'
+    ).run(name, cuisine || null, req.params.id);
     const row = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(req.params.id);
     res.json(row);
   });

@@ -10,7 +10,7 @@ function startScheduler(slackClient) {
 
       // Update countdown on all active (not-yet-expired) sessions
       const active = db.prepare(`
-        SELECT ls.*, r.name, r.cuisine, r.doordash_url
+        SELECT ls.*, r.name, r.cuisine
         FROM lunch_sessions ls
         JOIN restaurants r ON r.id = ls.restaurant_id
         WHERE ls.slack_message_ts IS NOT NULL
@@ -20,12 +20,12 @@ function startScheduler(slackClient) {
 
       for (const session of active) {
         const rsvpCount = db.prepare('SELECT COUNT(*) as count FROM rsvps WHERE session_id = ?').get(session.id).count;
-        const restaurant = { name: session.name, cuisine: session.cuisine, doordash_url: session.doordash_url };
+        const restaurant = { name: session.name, cuisine: session.cuisine };
         try {
           await slackClient.chat.update({
             channel: session.slack_channel_id,
             ts: session.slack_message_ts,
-            blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId: session.id, mode: session.mode }),
+            blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId: session.id, mode: session.mode, doordashUrl: session.doordash_url }),
             text: `Today's lunch: ${session.name}`,
           });
         } catch {

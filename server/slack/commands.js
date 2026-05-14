@@ -18,17 +18,12 @@ function registerCommands(app) {
       }
 
       if (subcommand === 'add') {
-        // Last arg is the URL, everything before it is the name
-        if (args.length < 2) {
-          return respond('Usage: `/lunchinator add Restaurant Name https://doordash-group-link`');
-        }
-        const doordash_url = args[args.length - 1];
-        const name = args.slice(0, args.length - 1).join(' ').replace(/"/g, '');
-        if (!name || !doordash_url.startsWith('http')) {
-          return respond('Usage: `/lunchinator add Restaurant Name https://doordash-group-link`');
+        const name = args.join(' ').replace(/"/g, '').trim();
+        if (!name) {
+          return respond('Usage: `/lunchinator add Restaurant Name`');
         }
         const db = getDb();
-        db.prepare('INSERT INTO restaurants (name, doordash_url) VALUES (?, ?)').run(name, doordash_url);
+        db.prepare('INSERT INTO restaurants (name) VALUES (?)').run(name);
         return respond(`✅ Added *${name}* to the list.`);
       }
 
@@ -44,7 +39,7 @@ function registerCommands(app) {
       if (subcommand === 'list') {
         const db = getDb();
         const rows = db.prepare('SELECT name, cuisine FROM restaurants ORDER BY name').all();
-        if (!rows.length) return respond('No restaurants yet. Add one with `/lunchinator add "Name" [doordash-url]`');
+        if (!rows.length) return respond('No restaurants yet. Add one with `/lunchinator add Restaurant Name`');
         const list = rows.map(r => `• *${r.name}*${r.cuisine ? ` — ${r.cuisine}` : ''}`).join('\n');
         return respond(`*Current restaurant list:*\n${list}`);
       }
@@ -107,6 +102,18 @@ function buildSpinModal(defaultMinutes) {
           action_id: 'restaurant_input',
           placeholder: { type: 'plain_text', text: 'Choose a restaurant...' },
           min_query_length: 0,
+        },
+      },
+      {
+        type: 'input',
+        block_id: 'doordash',
+        optional: true,
+        label: { type: 'plain_text', text: 'DoorDash group order link' },
+        hint: { type: 'plain_text', text: 'Start a group order on DoorDash first, then paste the link here. Leave blank if picking randomly — you can share it in the group DM after.' },
+        element: {
+          type: 'plain_text_input',
+          action_id: 'doordash_input',
+          placeholder: { type: 'plain_text', text: 'https://doordash.com/share/...' },
         },
       },
       {

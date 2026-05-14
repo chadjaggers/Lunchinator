@@ -42,14 +42,6 @@ export default function RestaurantList({ restaurants, onRefresh }) {
                 {r.cuisine && (
                   <p className="text-sm text-slate-400">{r.cuisine}</p>
                 )}
-                <a
-                  href={r.doordash_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-[var(--ice)] hover:underline truncate block max-w-xs mt-1"
-                >
-                  {r.doordash_url}
-                </a>
               </div>
               <div className="flex gap-3 shrink-0">
                 <button

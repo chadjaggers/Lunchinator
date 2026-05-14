@@ -27,6 +27,7 @@ function registerModals(app) {
       const values = view.state.values;
       const attendeeIds = values.attendees.attendees_input.selected_users;
       const mode = values.restaurant_mode.mode_input.selected_option.value;
+      const doordashUrl = values.doordash?.doordash_input?.value || null;
       const deadlineMinutes = parseInt(values.deadline.deadline_input.value, 10) || 30;
       const deadlineAt = new Date(Date.now() + deadlineMinutes * 60 * 1000).toISOString();
       const organizerId = body.user.id;
@@ -72,16 +73,16 @@ function registerModals(app) {
 
       // Insert session record
       const result = db.prepare(`
-        INSERT INTO lunch_sessions (restaurant_id, organizer_slack_id, attendee_slack_ids, mode, deadline_at, slack_channel_id)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(restaurant.id, organizerId, JSON.stringify(allUsers), mode, deadlineAt, channelId);
+        INSERT INTO lunch_sessions (restaurant_id, organizer_slack_id, attendee_slack_ids, mode, deadline_at, doordash_url, slack_channel_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(restaurant.id, organizerId, JSON.stringify(allUsers), mode, deadlineAt, doordashUrl, channelId);
 
       const sessionId = result.lastInsertRowid;
 
       // Post the Block Kit card
       const msgResult = await client.chat.postMessage({
         channel: channelId,
-        blocks: buildLunchCard({ restaurant, deadlineAt, rsvpCount: 0, sessionId, mode }),
+        blocks: buildLunchCard({ restaurant, deadlineAt, rsvpCount: 0, sessionId, mode, doordashUrl }),
         text: `Today's lunch: ${restaurant.name}`,
       });
 
