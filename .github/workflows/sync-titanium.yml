@@ -14,5 +14,5 @@ jobs:
 
       - name: Push to titanium/lunchinator
         run: |
-          git remote add titanium https://titanium:${{ secrets.TITANIUM_TOKEN }}@github.com/titanium/lunchinator.git
+          git remote add titanium https://x-access-token:${{ secrets.TITANIUM_TOKEN }}@github.com/titanium/lunchinator.git
           git push titanium master
