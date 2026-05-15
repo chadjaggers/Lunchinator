@@ -3,6 +3,7 @@ import { getRestaurants, addRestaurant, getSettings } from './api';
 import RestaurantList from './components/RestaurantList';
 import RestaurantForm from './components/RestaurantForm';
 import SettingsPanel from './components/SettingsPanel';
+import LaunchPanel from './components/LaunchPanel';
 
 export default function App() {
   const [restaurants, setRestaurants] = useState([]);
@@ -56,6 +57,13 @@ export default function App() {
             <button onClick={() => setError(null)} className="ml-4 font-bold opacity-70 hover:opacity-100">✕</button>
           </div>
         )}
+
+        <Card
+          title="Launch Lunch"
+          description="Spin a restaurant, pick your crew, and fire off the Slack group DM"
+        >
+          <LaunchPanel restaurants={restaurants} settings={settings} />
+        </Card>
 
         <Card
           title="Settings"

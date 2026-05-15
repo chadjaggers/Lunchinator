@@ -29,7 +29,7 @@ const adminAuth = basicAuth({
 const expressApp = express();
 expressApp.use(express.json());
 expressApp.get('/health', (req, res) => res.send('ok'));
-expressApp.use('/api', adminAuth, buildApiRoutes(db));
+expressApp.use('/api', adminAuth, buildApiRoutes(db, app.client));
 expressApp.use(adminAuth, express.static(path.join(__dirname, '../client/dist')));
 expressApp.get('/{*path}', adminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
