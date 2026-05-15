@@ -37,7 +37,7 @@ export default function App() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
       <header style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <img src="/burgerlogo.png" alt="Lunchinator" className="h-10 w-10 object-contain shrink-0" />
+          <img src="/burgerlogo.png" alt="Lunchinator" className="h-16 w-16 object-contain shrink-0" />
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <img src="/phase2-wordmark.svg" alt="Phase2" className="h-7 object-contain" style={{ width: 'auto' }} />
