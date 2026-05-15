@@ -52,8 +52,15 @@ function buildRouter(db, slackClient) {
   // Slack users — for the people picker in the admin panel
   router.get('/slack/users', async (req, res) => {
     try {
-      const result = await slackClient.users.list({ limit: 200 });
-      const users = (result.members || [])
+      const members = [];
+      let cursor;
+      do {
+        const result = await slackClient.users.list({ limit: 200, ...(cursor ? { cursor } : {}) });
+        members.push(...(result.members || []));
+        cursor = result.response_metadata?.next_cursor;
+      } while (cursor);
+
+      const users = members
         .filter(u => !u.deleted && !u.is_bot && u.id !== 'USLACKBOT')
         .map(u => ({
           id: u.id,
