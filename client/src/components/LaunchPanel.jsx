@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSlackUsers, launchSession } from '../api';
 
 export default function LaunchPanel({ restaurants, settings }) {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [peopleSearch, setPeopleSearch] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [restaurantSearch, setRestaurantSearch] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [doordashUrl, setDoordashUrl] = useState('');
   const [selectedPeople, setSelectedPeople] = useState(new Set());
   const [deadlineMinutes, setDeadlineMinutes] = useState(30);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);
   const [error, setError] = useState(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     getSlackUsers()
@@ -21,16 +24,37 @@ export default function LaunchPanel({ restaurants, settings }) {
   }, []);
 
   useEffect(() => {
-    if (settings.default_deadline_minutes) {
-      setDeadlineMinutes(settings.default_deadline_minutes);
-    }
+    if (settings.default_deadline_minutes) setDeadlineMinutes(settings.default_deadline_minutes);
   }, [settings.default_deadline_minutes]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+        if (!selectedRestaurant) setRestaurantSearch('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedRestaurant]);
+
+  function selectRestaurant(r) {
+    setSelectedRestaurant(r);
+    setRestaurantSearch(r.name);
+    setShowDropdown(false);
+    setSent(null);
+  }
 
   function spin() {
     if (!restaurants.length) return;
     const pick = restaurants[Math.floor(Math.random() * restaurants.length)];
-    setSelectedRestaurant(pick);
-    setSent(null);
+    selectRestaurant(pick);
+  }
+
+  function clearRestaurant() {
+    setSelectedRestaurant(null);
+    setRestaurantSearch('');
+    setShowDropdown(false);
   }
 
   function togglePerson(id) {
@@ -58,6 +82,7 @@ export default function LaunchPanel({ restaurants, settings }) {
       setDoordashUrl('');
       setSelectedPeople(new Set());
       setSelectedRestaurant(null);
+      setRestaurantSearch('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -65,13 +90,15 @@ export default function LaunchPanel({ restaurants, settings }) {
     }
   }
 
+  const filteredRestaurants = restaurants.filter(r =>
+    r.name.toLowerCase().includes(restaurantSearch.toLowerCase())
+  );
+
   const canSend = selectedRestaurant && selectedPeople.size > 0;
 
   return (
     <form onSubmit={handleSend} className="flex flex-col gap-5">
-      {error && (
-        <p className="text-sm" style={{ color: 'var(--coral)' }}>{error}</p>
-      )}
+      {error && <p className="text-sm" style={{ color: 'var(--coral)' }}>{error}</p>}
 
       {sent && (
         <div
@@ -82,21 +109,59 @@ export default function LaunchPanel({ restaurants, settings }) {
         </div>
       )}
 
-      {/* Restaurant picker */}
+      {/* Restaurant search + spin */}
       <div className="flex flex-col gap-2">
         <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Restaurant</label>
         <div className="flex items-center gap-3">
-          <div
-            className="flex-1 px-3 py-2 rounded-[8px] text-sm truncate"
-            style={{
-              backgroundColor: 'var(--bg)',
-              border: '1px solid var(--border)',
-              color: selectedRestaurant ? '#f0f6fc' : 'var(--text-muted)',
-            }}
-          >
-            {selectedRestaurant
-              ? `${selectedRestaurant.name}${selectedRestaurant.cuisine ? ` — ${selectedRestaurant.cuisine}` : ''}`
-              : 'Hit Spin to pick a restaurant'}
+          <div className="relative flex-1" ref={dropdownRef}>
+            <input
+              type="text"
+              value={restaurantSearch}
+              onChange={e => {
+                setRestaurantSearch(e.target.value);
+                setSelectedRestaurant(null);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder="Search or type a restaurant name…"
+              className="w-full rounded-[8px] px-3 py-2 pr-8 text-sm outline-none transition-shadow"
+              style={{
+                backgroundColor: 'var(--bg)',
+                border: `1px solid ${selectedRestaurant ? 'var(--cyan)' : 'var(--border)'}`,
+                color: '#f0f6fc',
+              }}
+              onFocus={e => { e.target.style.boxShadow = '0 0 0 2px var(--cyan)'; setShowDropdown(true); }}
+              onBlur={e => (e.target.style.boxShadow = 'none')}
+            />
+            {restaurantSearch && (
+              <button
+                type="button"
+                onClick={clearRestaurant}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                ✕
+              </button>
+            )}
+            {showDropdown && restaurantSearch && filteredRestaurants.length > 0 && (
+              <div
+                className="absolute z-10 w-full mt-1 rounded-[8px] overflow-hidden shadow-lg"
+                style={{ backgroundColor: 'var(--surface-raised)', border: '1px solid var(--border)' }}
+              >
+                {filteredRestaurants.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onMouseDown={() => selectRestaurant(r)}
+                    className="w-full text-left px-3 py-2 text-sm hover:opacity-80 transition-opacity flex items-center justify-between"
+                    style={{ color: '#f0f6fc' }}
+                  >
+                    <span>{r.name}</span>
+                    {r.cuisine && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.cuisine}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -135,50 +200,48 @@ export default function LaunchPanel({ restaurants, settings }) {
       <div className="flex flex-col gap-2">
         <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
           Who's coming?{' '}
-          {selectedPeople.size > 0 && (
-            <span style={{ color: 'var(--cyan)' }}>{selectedPeople.size} selected</span>
-          )}
+          {selectedPeople.size > 0 && <span style={{ color: 'var(--cyan)' }}>{selectedPeople.size} selected</span>}
         </label>
         {usersLoading ? (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading workspace members…</p>
         ) : (
           <>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search people…"
-            className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
-            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
-            onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
-            onBlur={e => (e.target.style.boxShadow = 'none')}
-          />
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-            {users.filter(u => {
-              const q = search.toLowerCase();
-              return !q || u.realName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
-            }).map(u => {
-              const checked = selectedPeople.has(u.id);
-              return (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => togglePerson(u.id)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-left text-sm transition-all hover:opacity-90"
-                  style={{
-                    backgroundColor: checked ? 'rgba(22,163,214,0.15)' : 'var(--bg)',
-                    border: `1px solid ${checked ? 'var(--cyan)' : 'var(--border)'}`,
-                    color: checked ? 'var(--ice)' : '#f0f6fc',
-                  }}
-                >
-                  {u.avatar && (
-                    <img src={u.avatar} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                  )}
-                  <span className="truncate text-xs">{u.displayName || u.realName}</span>
-                </button>
-              );
-            })}
-          </div>
+            <input
+              type="text"
+              value={peopleSearch}
+              onChange={e => setPeopleSearch(e.target.value)}
+              placeholder="Search people…"
+              className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
+              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
+              onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
+              onBlur={e => (e.target.style.boxShadow = 'none')}
+            />
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+              {users
+                .filter(u => {
+                  const q = peopleSearch.toLowerCase();
+                  return !q || u.realName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+                })
+                .map(u => {
+                  const checked = selectedPeople.has(u.id);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => togglePerson(u.id)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-left transition-all hover:opacity-90"
+                      style={{
+                        backgroundColor: checked ? 'rgba(22,163,214,0.15)' : 'var(--bg)',
+                        border: `1px solid ${checked ? 'var(--cyan)' : 'var(--border)'}`,
+                        color: checked ? 'var(--ice)' : '#f0f6fc',
+                      }}
+                    >
+                      {u.avatar && <img src={u.avatar} alt="" className="w-5 h-5 rounded-full shrink-0" />}
+                      <span className="truncate text-xs">{u.displayName || u.realName}</span>
+                    </button>
+                  );
+                })}
+            </div>
           </>
         )}
       </div>
