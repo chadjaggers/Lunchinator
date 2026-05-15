@@ -4,6 +4,7 @@ import { getSlackUsers, launchSession } from '../api';
 export default function LaunchPanel({ restaurants, settings }) {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [doordashUrl, setDoordashUrl] = useState('');
   const [selectedPeople, setSelectedPeople] = useState(new Set());
@@ -141,8 +142,22 @@ export default function LaunchPanel({ restaurants, settings }) {
         {usersLoading ? (
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading workspace members…</p>
         ) : (
+          <>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search people…"
+            className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
+            style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
+            onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
+            onBlur={e => (e.target.style.boxShadow = 'none')}
+          />
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-            {users.map(u => {
+            {users.filter(u => {
+              const q = search.toLowerCase();
+              return !q || u.realName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
+            }).map(u => {
               const checked = selectedPeople.has(u.id);
               return (
                 <button
@@ -164,6 +179,7 @@ export default function LaunchPanel({ restaurants, settings }) {
               );
             })}
           </div>
+          </>
         )}
       </div>
 
