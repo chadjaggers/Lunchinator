@@ -47,9 +47,6 @@ export default function RestaurantList({ restaurants, onRefresh }) {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="font-semibold text-sm truncate" style={{ color: '#f0f6fc' }}>{r.name}</p>
-                {r.cuisine && (
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{r.cuisine}</p>
-                )}
               </div>
               <div className="flex gap-4 shrink-0">
                 <button

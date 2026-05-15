@@ -157,7 +157,6 @@ export default function LaunchPanel({ restaurants, settings }) {
                     style={{ color: '#f0f6fc' }}
                   >
                     <span>{r.name}</span>
-                    {r.cuisine && <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{r.cuisine}</span>}
                   </button>
                 ))}
               </div>

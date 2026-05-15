@@ -17,10 +17,7 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode, do
     },
     {
       type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: `*Cuisine:*\n${restaurant.cuisine || 'N/A'}` },
-        { type: 'mrkdwn', text: `*${formatDeadline(deadlineAt)}*` },
-      ],
+      text: { type: 'mrkdwn', text: `*${formatDeadline(deadlineAt)}*` },
     },
     {
       type: 'actions',
