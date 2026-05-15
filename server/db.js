@@ -48,6 +48,7 @@ function initDb(dbPath) {
   try { db.exec("ALTER TABLE lunch_sessions ADD COLUMN times_up_sent_at TEXT"); } catch {}
   try { db.exec("ALTER TABLE lunch_sessions ADD COLUMN doordash_url TEXT"); } catch {}
   try { db.exec("ALTER TABLE restaurants DROP COLUMN doordash_url"); } catch {}
+  try { db.exec("ALTER TABLE lunch_sessions ADD COLUMN reminder_sent_at TEXT"); } catch {}
   const existing = db.prepare("SELECT key FROM settings WHERE key = 'default_deadline_minutes'").get();
   if (!existing) {
     db.prepare("INSERT INTO settings (key, value) VALUES ('default_deadline_minutes', '30')").run();

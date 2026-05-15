@@ -33,6 +33,28 @@ function startScheduler(slackClient) {
         }
       }
 
+      // Sessions within 5 minutes of deadline that haven't had a reminder sent
+      const fiveMinFromNow = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      const soonExpiring = db.prepare(`
+        SELECT ls.*, r.name
+        FROM lunch_sessions ls
+        JOIN restaurants r ON r.id = ls.restaurant_id
+        WHERE ls.slack_channel_id IS NOT NULL
+          AND ls.deadline_at > ?
+          AND ls.deadline_at <= ?
+          AND ls.reminder_sent_at IS NULL
+      `).all(now, fiveMinFromNow);
+
+      for (const session of soonExpiring) {
+        db.prepare('UPDATE lunch_sessions SET reminder_sent_at = ? WHERE id = ?').run(now, session.id);
+        try {
+          await slackClient.chat.postMessage({
+            channel: session.slack_channel_id,
+            text: `<!here> ⏰ *5 minutes left* to get your order in for *${session.name}*! Place your order now 🍽️`,
+          });
+        } catch {}
+      }
+
       // Sessions past deadline that haven't been notified yet
       const expired = db.prepare(`
         SELECT ls.*, r.name
