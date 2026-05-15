@@ -40,8 +40,8 @@ export default function App() {
           <img src="/burgerlogo.png" alt="Lunchinator" className="h-10 w-10 object-contain shrink-0" />
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <img src="/phase2-wordmark.svg" alt="Phase2" className="h-5 object-contain" style={{ width: 'auto' }} />
-              <span className="font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif', fontSize: '1.05rem' }}>
+              <img src="/phase2-wordmark.svg" alt="Phase2" className="h-7 object-contain" style={{ width: 'auto' }} />
+              <span className="font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif', fontSize: '1.35rem' }}>
                 Lunchinator
               </span>
             </div>
