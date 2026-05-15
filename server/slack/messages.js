@@ -5,7 +5,7 @@ function formatDeadline(deadlineAt) {
   const diffMs = deadline - new Date();
   const diffMin = Math.round(diffMs / 60000);
   if (diffMin <= 0) return '⏱ Order deadline passed';
-  const timeStr = deadline.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const timeStr = deadline.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' });
   return `⏱ Order by ${timeStr} (${diffMin} min left)`;
 }
 
