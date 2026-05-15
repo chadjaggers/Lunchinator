@@ -41,7 +41,7 @@ export default function App() {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <img src="/phase2-wordmark.svg" alt="Phase2" className="h-5 object-contain" style={{ width: 'auto' }} />
-              <span className="text-xl font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif' }}>
+              <span className="font-bold leading-none" style={{ color: 'var(--ice)', fontFamily: 'Manrope, sans-serif', fontSize: '1.05rem' }}>
                 Lunchinator
               </span>
             </div>
@@ -62,8 +62,8 @@ export default function App() {
         )}
 
         <Card
-          title="Launch Lunch"
-          description="Spin a restaurant, pick your crew, and fire off the Slack group DM"
+          title="It's Lunch Time"
+          description="Pick a restaurant, get the DoorDash link, pick the peeps, and send it off"
         >
           <LaunchPanel restaurants={restaurants} settings={settings} />
         </Card>
