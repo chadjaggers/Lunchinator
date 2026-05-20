@@ -53,6 +53,10 @@ function initDb(dbPath) {
   if (!existing) {
     db.prepare("INSERT INTO settings (key, value) VALUES ('default_deadline_minutes', '30')").run();
   }
+  const existingChannel = db.prepare("SELECT key FROM settings WHERE key = 'lunch_channel_id'").get();
+  if (!existingChannel) {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('lunch_channel_id', '')").run();
+  }
   return db;
 }
 

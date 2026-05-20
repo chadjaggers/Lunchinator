@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { getSlackUsers, launchSession } from '../api';
+import { getSlackUsers, getRegulars, launchSession } from '../api';
 import Eyebrow from './Eyebrow';
 import {
-  IDice, ISearch, ILink, ISend, ICheck, IClose, IClock, IUsers, IAlert,
+  IDice, ISearch, ILink, ISend, ICheck, IClose, IUsers, IAlert,
 } from './Icons';
 
 const DEADLINE_PRESETS = [15, 30, 45, 60];
 
 export default function LaunchPanel({ restaurants, settings }) {
   const [users, setUsers] = useState([]);
+  const [regularsData, setRegularsData] = useState([]); // [{id, count}] sorted by count desc
   const [usersLoading, setUsersLoading] = useState(true);
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [allCrewExpanded, setAllCrewExpanded] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [restaurantSearch, setRestaurantSearch] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -23,12 +25,20 @@ export default function LaunchPanel({ restaurants, settings }) {
   const [error, setError] = useState(null);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    getSlackUsers()
-      .then(setUsers)
-      .catch(() => setError('Could not load Slack users — check server logs.'))
-      .finally(() => setUsersLoading(false));
-  }, []);
+  async function loadData() {
+    setUsersLoading(true);
+    try {
+      const [u, r] = await Promise.all([getSlackUsers(), getRegulars()]);
+      setUsers(u);
+      setRegularsData(r);
+    } catch {
+      setError('Could not load Slack users — check server logs.');
+    } finally {
+      setUsersLoading(false);
+    }
+  }
+
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
     if (settings.default_deadline_minutes) {
@@ -93,6 +103,8 @@ export default function LaunchPanel({ restaurants, settings }) {
       setSelectedPeople(new Set());
       setSelectedRestaurant(null);
       setRestaurantSearch('');
+      // Refresh regulars so counts update after the send
+      getRegulars().then(setRegularsData).catch(() => {});
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,15 +117,28 @@ export default function LaunchPanel({ restaurants, settings }) {
     [restaurants, restaurantSearch],
   );
 
-  const filteredUsers = useMemo(() => {
+  // Cross-reference regulars with channel-filtered users; preserve count order
+  const regularUsers = useMemo(() =>
+    regularsData.map(r => users.find(u => u.id === r.id)).filter(Boolean),
+    [regularsData, users],
+  );
+  const regularIds = useMemo(() => new Set(regularUsers.map(u => u.id)), [regularUsers]);
+
+  // All Crew = channel members who aren't Regulars
+  const allCrewUsers = useMemo(() =>
+    users.filter(u => !regularIds.has(u.id)),
+    [users, regularIds],
+  );
+
+  const filteredAllCrew = useMemo(() => {
     const q = peopleSearch.toLowerCase();
-    if (!q) return users;
-    return users.filter(u =>
+    if (!q) return allCrewUsers;
+    return allCrewUsers.filter(u =>
       u.realName.toLowerCase().includes(q) ||
       u.displayName.toLowerCase().includes(q) ||
       u.name.toLowerCase().includes(q),
     );
-  }, [users, peopleSearch]);
+  }, [allCrewUsers, peopleSearch]);
 
   const selectedUserList = useMemo(
     () => users.filter(u => selectedPeople.has(u.id)),
@@ -121,10 +146,11 @@ export default function LaunchPanel({ restaurants, settings }) {
   );
 
   const canSend = selectedRestaurant && selectedPeople.size > 0;
-
-  // Step indicator state
   const stepRestaurantDone = Boolean(selectedRestaurant);
   const stepPeopleDone = selectedPeople.size > 0;
+
+  // When there are no regulars yet, show the full crew list directly (not collapsed)
+  const noRegularsYet = regularUsers.length === 0;
 
   return (
     <form onSubmit={handleSend} className="flex flex-col gap-7">
@@ -189,12 +215,7 @@ export default function LaunchPanel({ restaurants, settings }) {
                     padding: '3px 8px', borderRadius: 999,
                   }}
                 >PICKED</span>
-                <button
-                  type="button"
-                  onClick={clearRestaurant}
-                  className="btn-ghost"
-                  aria-label="Clear restaurant"
-                >
+                <button type="button" onClick={clearRestaurant} className="btn-ghost" aria-label="Clear restaurant">
                   <IClose size={14} />
                 </button>
               </span>
@@ -220,19 +241,12 @@ export default function LaunchPanel({ restaurants, settings }) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={spin}
-            disabled={!restaurants.length}
-            className="btn-secondary"
-          >
+          <button type="button" onClick={spin} disabled={!restaurants.length} className="btn-secondary">
             <IDice size={16} /> {selectedRestaurant ? 'Spin again' : 'Surprise me'}
           </button>
         </div>
         {!restaurants.length && (
-          <p className="text-xs" style={{ color: 'var(--coral)' }}>
-            Add restaurants below before spinning.
-          </p>
+          <p className="text-xs" style={{ color: 'var(--coral)' }}>Add restaurants below before spinning.</p>
         )}
       </div>
 
@@ -258,7 +272,7 @@ export default function LaunchPanel({ restaurants, settings }) {
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-2">
           <Eyebrow>
-            Crew{selectedPeople.size > 0 ? ` · ${selectedPeople.size} of ${users.length}` : ''}
+            Crew{selectedPeople.size > 0 ? ` · ${selectedPeople.size} selected` : ''}
           </Eyebrow>
           {selectedPeople.size > 0 && (
             <button
@@ -267,7 +281,7 @@ export default function LaunchPanel({ restaurants, settings }) {
               className="text-xs"
               style={{ color: 'var(--text-muted)', background: 'transparent', border: 0, cursor: 'pointer' }}
             >
-              Clear
+              Clear all
             </button>
           )}
         </div>
@@ -276,17 +290,6 @@ export default function LaunchPanel({ restaurants, settings }) {
           <UserGridSkeleton />
         ) : (
           <>
-            <div className="input-wrap">
-              <span className="input-icon"><ISearch size={16} /></span>
-              <input
-                type="text"
-                value={peopleSearch}
-                onChange={e => setPeopleSearch(e.target.value)}
-                placeholder="Search teammates…"
-                className="input-base"
-              />
-            </div>
-
             {/* Selected chip strip */}
             {selectedUserList.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -312,54 +315,65 @@ export default function LaunchPanel({ restaurants, settings }) {
               </div>
             )}
 
-            {/* Avatar grid */}
-            <div
-              className="grid gap-2"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
-            >
-              {filteredUsers.map(u => {
-                const checked = selectedPeople.has(u.id);
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => togglePerson(u.id)}
-                    className="relative flex flex-col items-center gap-2 rounded-[10px] transition-colors"
-                    style={{
-                      background: checked ? 'rgba(22, 163, 214, 0.08)' : 'var(--bg-1)',
-                      border: `1px solid ${checked ? 'rgba(22, 163, 214, 0.45)' : 'var(--border)'}`,
-                      color: checked ? 'var(--ice)' : 'var(--text)',
-                      padding: '12px 10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Avatar user={u} size={40} />
-                    <span
-                      className="text-xs font-medium text-center leading-tight truncate w-full"
-                      title={u.realName}
-                    >
-                      {u.displayName || u.realName}
-                    </span>
-                    {checked && (
-                      <span
-                        className="absolute flex items-center justify-center"
-                        style={{
-                          top: 6, right: 6, width: 18, height: 18, borderRadius: '50%',
-                          background: 'var(--cyan)', color: '#fff',
-                        }}
-                      >
-                        <ICheck size={11} />
-                      </span>
+            {/* REGULARS — shown when we have history */}
+            {regularUsers.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <Eyebrow color="var(--ice)">Regulars</Eyebrow>
+                <UserGrid users={regularUsers} selectedPeople={selectedPeople} onToggle={togglePerson} />
+              </div>
+            )}
+
+            {/* ALL CREW — collapsible when regulars exist, always open when they don't */}
+            {noRegularsYet ? (
+              <div className="flex flex-col gap-2">
+                <div className="input-wrap">
+                  <span className="input-icon"><ISearch size={16} /></span>
+                  <input
+                    type="text"
+                    value={peopleSearch}
+                    onChange={e => setPeopleSearch(e.target.value)}
+                    placeholder="Search teammates…"
+                    className="input-base"
+                  />
+                </div>
+                <UserGrid users={filteredAllCrew} selectedPeople={selectedPeople} onToggle={togglePerson} />
+                {filteredAllCrew.length === 0 && (
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No matches.</p>
+                )}
+              </div>
+            ) : allCrewUsers.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAllCrewExpanded(v => !v)}
+                  className="flex items-center gap-2 self-start"
+                  style={{ background: 'transparent', border: 0, cursor: 'pointer', padding: 0 }}
+                >
+                  <Eyebrow color="var(--text-muted)">
+                    {allCrewExpanded ? '▾' : '▸'} All crew · {allCrewUsers.length} others
+                  </Eyebrow>
+                </button>
+
+                {allCrewExpanded && (
+                  <>
+                    <div className="input-wrap">
+                      <span className="input-icon"><ISearch size={16} /></span>
+                      <input
+                        type="text"
+                        value={peopleSearch}
+                        onChange={e => setPeopleSearch(e.target.value)}
+                        placeholder="Search teammates…"
+                        className="input-base"
+                      />
+                    </div>
+                    <UserGrid users={filteredAllCrew} selectedPeople={selectedPeople} onToggle={togglePerson} />
+                    {filteredAllCrew.length === 0 && (
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No matches.</p>
                     )}
-                  </button>
-                );
-              })}
-              {filteredUsers.length === 0 && (
-                <p className="text-sm col-span-full" style={{ color: 'var(--text-muted)' }}>
-                  No matches.
-                </p>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -430,11 +444,7 @@ export default function LaunchPanel({ restaurants, settings }) {
               {' · '}deadline in <strong style={{ color: 'var(--text)' }}>{deadlineMinutes} min</strong>
             </div>
           )}
-          <button
-            type="submit"
-            disabled={!canSend || sending}
-            className="btn-primary"
-          >
+          <button type="submit" disabled={!canSend || sending} className="btn-primary">
             <ISend size={16} /> {sending ? 'Sending…' : 'Send to Slack'}
           </button>
         </div>
@@ -445,12 +455,47 @@ export default function LaunchPanel({ restaurants, settings }) {
 
 /* ===================== Subcomponents ===================== */
 
+function UserGrid({ users, selectedPeople, onToggle }) {
+  return (
+    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
+      {users.map(u => {
+        const checked = selectedPeople.has(u.id);
+        return (
+          <button
+            key={u.id}
+            type="button"
+            onClick={() => onToggle(u.id)}
+            className="relative flex flex-col items-center gap-2 rounded-[10px] transition-colors"
+            style={{
+              background: checked ? 'rgba(22, 163, 214, 0.08)' : 'var(--bg-1)',
+              border: `1px solid ${checked ? 'rgba(22, 163, 214, 0.45)' : 'var(--border)'}`,
+              color: checked ? 'var(--ice)' : 'var(--text)',
+              padding: '12px 10px',
+              cursor: 'pointer',
+            }}
+          >
+            <Avatar user={u} size={40} />
+            <span className="text-xs font-medium text-center leading-tight truncate w-full" title={u.realName}>
+              {u.displayName || u.realName}
+            </span>
+            {checked && (
+              <span
+                className="absolute flex items-center justify-center"
+                style={{ top: 6, right: 6, width: 18, height: 18, borderRadius: '50%', background: 'var(--cyan)', color: '#fff' }}
+              >
+                <ICheck size={11} />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Step({ n, label, active }) {
   return (
-    <div
-      className="flex items-center gap-2"
-      style={{ color: active ? 'var(--cyan)' : 'var(--text-dim)' }}
-    >
+    <div className="flex items-center gap-2" style={{ color: active ? 'var(--cyan)' : 'var(--text-dim)' }}>
       <span
         className="flex items-center justify-center"
         style={{
@@ -460,22 +505,15 @@ function Step({ n, label, active }) {
           fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: 11,
         }}
       >{n}</span>
-      <span
-        style={{
-          fontFamily: 'Manrope, sans-serif', fontWeight: 600,
-          letterSpacing: '0.02em',
-        }}
-      >{label}</span>
+      <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600, letterSpacing: '0.02em' }}>
+        {label}
+      </span>
     </div>
   );
 }
 
 function StepLine() {
-  return (
-    <div
-      style={{ flex: '0 1 60px', height: 1, background: 'var(--border-soft)' }}
-    />
-  );
+  return <div style={{ flex: '0 1 60px', height: 1, background: 'var(--border-soft)' }} />;
 }
 
 function Avatar({ user, size = 36 }) {
@@ -484,16 +522,12 @@ function Avatar({ user, size = 36 }) {
       <img
         src={user.avatar}
         alt=""
-        style={{
-          width: size, height: size, borderRadius: '50%', objectFit: 'cover',
-          flexShrink: 0,
-        }}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
       />
     );
   }
   const name = user.realName || user.displayName || user.name || '?';
   const initials = name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
-  // deterministic hue from user id
   let h = 0;
   for (let i = 0; i < (user.id || name).length; i++) h = (h + (user.id || name).charCodeAt(i) * 7) % 360;
   return (
@@ -513,10 +547,7 @@ function Avatar({ user, size = 36 }) {
 
 function UserGridSkeleton() {
   return (
-    <div
-      className="grid gap-2"
-      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
-    >
+    <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}>
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
@@ -527,14 +558,8 @@ function UserGridSkeleton() {
             opacity: 1 - (i * 0.06),
           }}
         >
-          <div style={{
-            width: 40, height: 40, borderRadius: '50%',
-            background: 'var(--border-soft)',
-          }} />
-          <div style={{
-            width: '70%', height: 10, borderRadius: 4,
-            background: 'var(--border-soft)',
-          }} />
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--border-soft)' }} />
+          <div style={{ width: '70%', height: 10, borderRadius: 4, background: 'var(--border-soft)' }} />
         </div>
       ))}
     </div>

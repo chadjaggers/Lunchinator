@@ -178,7 +178,7 @@ export default function App() {
             <div>
               <Eyebrow>Settings</Eyebrow>
               <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Default deadline applied when launching without override.
+                Set your lunch channel to filter the crew picker, and configure the default order deadline.
               </p>
             </div>
             <SettingsPanel settings={settings} onRefresh={refresh} />

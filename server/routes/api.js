@@ -49,18 +49,20 @@ function buildRouter(db, slackClient) {
     res.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
   });
 
-  // Slack users — for the people picker in the admin panel
+  // Slack users — for the people picker in the admin panel.
+  // Filtered to lunch_channel_id members when that setting is configured.
+  // Requires channels:read (public) or groups:read (private) Slack scope for channel filtering.
   router.get('/slack/users', async (req, res) => {
     try {
-      const members = [];
+      const allMembers = [];
       let cursor;
       do {
         const result = await slackClient.users.list({ limit: 200, ...(cursor ? { cursor } : {}) });
-        members.push(...(result.members || []));
+        allMembers.push(...(result.members || []));
         cursor = result.response_metadata?.next_cursor;
       } while (cursor);
 
-      const users = members
+      let users = allMembers
         .filter(u => !u.deleted && !u.is_bot && u.id !== 'USLACKBOT')
         .map(u => ({
           id: u.id,
@@ -70,11 +72,50 @@ function buildRouter(db, slackClient) {
           avatar: u.profile?.image_48 || null,
         }))
         .sort((a, b) => a.realName.localeCompare(b.realName));
+
+      const channelSetting = db.prepare("SELECT value FROM settings WHERE key = 'lunch_channel_id'").get();
+      const channelId = channelSetting?.value;
+      if (channelId) {
+        try {
+          const channelMemberIds = new Set();
+          let chanCursor;
+          do {
+            const r = await slackClient.conversations.members({
+              channel: channelId, limit: 200, ...(chanCursor ? { cursor: chanCursor } : {}),
+            });
+            for (const id of (r.members || [])) channelMemberIds.add(id);
+            chanCursor = r.response_metadata?.next_cursor;
+          } while (chanCursor);
+          users = users.filter(u => channelMemberIds.has(u.id));
+        } catch (err) {
+          console.warn('Could not filter by lunch channel (check channels:read scope):', err.message);
+        }
+      }
+
       res.json(users);
     } catch (err) {
       console.error('slack/users error:', err);
       res.status(500).json({ error: 'Failed to fetch Slack users' });
     }
+  });
+
+  // Top 15 most-selected attendees across all sessions — powers the Regulars grid.
+  router.get('/regulars', (req, res) => {
+    const sessions = db.prepare(
+      'SELECT attendee_slack_ids FROM lunch_sessions WHERE attendee_slack_ids IS NOT NULL'
+    ).all();
+    const counts = {};
+    for (const session of sessions) {
+      try {
+        const ids = JSON.parse(session.attendee_slack_ids);
+        for (const id of ids) counts[id] = (counts[id] || 0) + 1;
+      } catch {}
+    }
+    const top = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([id, count]) => ({ id, count }));
+    res.json(top);
   });
 
   // Launch a lunch session from the web admin panel

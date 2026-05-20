@@ -47,6 +47,12 @@ export async function getSlackUsers() {
   return r.json();
 }
 
+export async function getRegulars() {
+  const r = await fetch(`${BASE}/regulars`);
+  if (!r.ok) throw new Error('Failed to fetch regulars');
+  return r.json();
+}
+
 export async function launchSession(data) {
   const r = await fetch(`${BASE}/sessions/launch`, {
     method: 'POST',
