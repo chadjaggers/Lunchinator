@@ -172,19 +172,6 @@ export default function App() {
           <LaunchPanel restaurants={restaurants} settings={settings} />
         </div>
 
-        {/* Settings — slim config strip */}
-        <div className="card" style={{ padding: '18px 24px' }}>
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <Eyebrow>Settings</Eyebrow>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                Set your lunch channel to filter the crew picker, and configure the default order deadline.
-              </p>
-            </div>
-            <SettingsPanel settings={settings} onRefresh={refresh} />
-          </div>
-        </div>
-
         {/* Restaurants */}
         <div className="card" style={{ padding: 24 }}>
           <div className="flex items-start justify-between gap-4 mb-4">
@@ -229,6 +216,19 @@ export default function App() {
             </div>
           )}
           <RestaurantList restaurants={restaurants} onRefresh={refresh} />
+        </div>
+
+        {/* Settings — at the bottom, rarely changed */}
+        <div className="card" style={{ padding: '18px 24px' }}>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <Eyebrow>Settings</Eyebrow>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                Set your lunch channel to filter the crew picker, and configure the default order deadline.
+              </p>
+            </div>
+            <SettingsPanel settings={settings} onRefresh={refresh} />
+          </div>
         </div>
       </main>
     </div>
