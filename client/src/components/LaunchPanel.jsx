@@ -1,5 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { getSlackUsers, launchSession } from '../api';
+import Eyebrow from './Eyebrow';
+import {
+  IDice, ISearch, ILink, ISend, ICheck, IClose, IClock, IUsers, IAlert,
+} from './Icons';
+
+const DEADLINE_PRESETS = [15, 30, 45, 60];
 
 export default function LaunchPanel({ restaurants, settings }) {
   const [users, setUsers] = useState([]);
@@ -11,6 +17,7 @@ export default function LaunchPanel({ restaurants, settings }) {
   const [doordashUrl, setDoordashUrl] = useState('');
   const [selectedPeople, setSelectedPeople] = useState(new Set());
   const [deadlineMinutes, setDeadlineMinutes] = useState(30);
+  const [deadlineCustom, setDeadlineCustom] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);
   const [error, setError] = useState(null);
@@ -24,7 +31,10 @@ export default function LaunchPanel({ restaurants, settings }) {
   }, []);
 
   useEffect(() => {
-    if (settings.default_deadline_minutes) setDeadlineMinutes(settings.default_deadline_minutes);
+    if (settings.default_deadline_minutes) {
+      setDeadlineMinutes(settings.default_deadline_minutes);
+      setDeadlineCustom(!DEADLINE_PRESETS.includes(Number(settings.default_deadline_minutes)));
+    }
   }, [settings.default_deadline_minutes]);
 
   useEffect(() => {
@@ -90,30 +100,71 @@ export default function LaunchPanel({ restaurants, settings }) {
     }
   }
 
-  const filteredRestaurants = restaurants.filter(r =>
-    r.name.toLowerCase().includes(restaurantSearch.toLowerCase())
+  const filteredRestaurants = useMemo(() =>
+    restaurants.filter(r => r.name.toLowerCase().includes(restaurantSearch.toLowerCase())),
+    [restaurants, restaurantSearch],
+  );
+
+  const filteredUsers = useMemo(() => {
+    const q = peopleSearch.toLowerCase();
+    if (!q) return users;
+    return users.filter(u =>
+      u.realName.toLowerCase().includes(q) ||
+      u.displayName.toLowerCase().includes(q) ||
+      u.name.toLowerCase().includes(q),
+    );
+  }, [users, peopleSearch]);
+
+  const selectedUserList = useMemo(
+    () => users.filter(u => selectedPeople.has(u.id)),
+    [users, selectedPeople],
   );
 
   const canSend = selectedRestaurant && selectedPeople.size > 0;
 
-  return (
-    <form onSubmit={handleSend} className="flex flex-col gap-5">
-      {error && <p className="text-sm" style={{ color: 'var(--coral)' }}>{error}</p>}
+  // Step indicator state
+  const stepRestaurantDone = Boolean(selectedRestaurant);
+  const stepPeopleDone = selectedPeople.size > 0;
 
-      {sent && (
+  return (
+    <form onSubmit={handleSend} className="flex flex-col gap-7">
+      {/* Step indicator */}
+      <div className="flex items-center gap-3 text-xs">
+        <Step n={1} label="Restaurant" active={stepRestaurantDone} />
+        <StepLine />
+        <Step n={2} label="Crew" active={stepPeopleDone} />
+        <StepLine />
+        <Step n={3} label="Send" active={canSend} />
+      </div>
+
+      {error && (
         <div
-          className="px-4 py-3 rounded-[8px] text-sm"
-          style={{ backgroundColor: 'rgba(31,78,82,0.35)', border: '1px solid var(--pine)', color: 'var(--ice)' }}
+          className="flex items-start gap-3 px-4 py-3 rounded-[10px] text-sm"
+          style={{ background: 'rgba(245, 84, 58, 0.08)', border: '1px solid rgba(245, 84, 58, 0.35)', color: 'var(--coral)' }}
         >
-          ✓ Sent! <strong>{sent.restaurant.name}</strong> — group DM opened in Slack.
+          <IAlert size={16} style={{ marginTop: 1 }} />
+          <span style={{ color: 'var(--text)' }}>{error}</span>
         </div>
       )}
 
-      {/* Restaurant search + spin */}
+      {sent && (
+        <div
+          className="flex items-start gap-3 px-4 py-3 rounded-[10px] text-sm"
+          style={{ background: 'rgba(31, 78, 82, 0.25)', border: '1px solid rgba(31, 78, 82, 0.5)' }}
+        >
+          <ICheck size={16} style={{ color: 'var(--ice)', marginTop: 1 }} />
+          <span style={{ color: 'var(--text)' }}>
+            Sent to Slack — <strong>{sent.restaurant.name}</strong> group DM opened.
+          </span>
+        </div>
+      )}
+
+      {/* RESTAURANT */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Restaurant</label>
+        <Eyebrow>Restaurant</Eyebrow>
         <div className="flex items-center gap-3">
-          <div className="relative flex-1" ref={dropdownRef}>
+          <div className="relative flex-1 input-wrap" ref={dropdownRef}>
+            <span className="input-icon"><ISearch size={16} /></span>
             <input
               type="text"
               value={restaurantSearch}
@@ -124,39 +175,46 @@ export default function LaunchPanel({ restaurants, settings }) {
               }}
               onFocus={() => setShowDropdown(true)}
               placeholder="Search or type a restaurant name…"
-              className="w-full rounded-[8px] px-3 py-2 pr-8 text-sm outline-none transition-shadow"
-              style={{
-                backgroundColor: 'var(--bg)',
-                border: `1px solid ${selectedRestaurant ? 'var(--cyan)' : 'var(--border)'}`,
-                color: '#f0f6fc',
-              }}
-              onFocus={e => { e.target.style.boxShadow = '0 0 0 2px var(--cyan)'; setShowDropdown(true); }}
-              onBlur={e => (e.target.style.boxShadow = 'none')}
+              className="input-base"
+              data-picked={selectedRestaurant ? 'true' : 'false'}
+              style={{ paddingRight: selectedRestaurant ? 86 : 38 }}
             />
-            {restaurantSearch && (
-              <button
-                type="button"
-                onClick={clearRestaurant}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                ✕
-              </button>
+            {selectedRestaurant && (
+              <span className="input-trailing" style={{ gap: 4 }}>
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{
+                    fontFamily: 'Manrope, sans-serif', letterSpacing: '0.08em',
+                    color: 'var(--cyan)', background: 'rgba(22,163,214,0.10)',
+                    padding: '3px 8px', borderRadius: 999,
+                  }}
+                >PICKED</span>
+                <button
+                  type="button"
+                  onClick={clearRestaurant}
+                  className="btn-ghost"
+                  aria-label="Clear restaurant"
+                >
+                  <IClose size={14} />
+                </button>
+              </span>
             )}
             {showDropdown && restaurantSearch && filteredRestaurants.length > 0 && (
               <div
-                className="absolute z-10 w-full mt-1 rounded-[8px] overflow-hidden shadow-lg"
-                style={{ backgroundColor: 'var(--surface-raised)', border: '1px solid var(--border)' }}
+                className="absolute z-10 left-0 right-0 mt-1 rounded-[10px] overflow-hidden"
+                style={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}
               >
                 {filteredRestaurants.map(r => (
                   <button
                     key={r.id}
                     type="button"
                     onMouseDown={() => selectRestaurant(r)}
-                    className="w-full text-left px-3 py-2 text-sm hover:opacity-80 transition-opacity flex items-center justify-between"
-                    style={{ color: '#f0f6fc' }}
+                    className="w-full text-left px-3 py-2 text-sm transition-colors"
+                    style={{ color: 'var(--text)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(22,163,214,0.08)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <span>{r.name}</span>
+                    {r.name}
                   </button>
                 ))}
               </div>
@@ -166,113 +224,319 @@ export default function LaunchPanel({ restaurants, settings }) {
             type="button"
             onClick={spin}
             disabled={!restaurants.length}
-            className="shrink-0 text-sm font-semibold px-4 py-2 rounded-[8px] transition-opacity hover:opacity-80 disabled:opacity-40"
-            style={{ backgroundColor: 'var(--indigo)', color: 'var(--ice)', border: '1px solid var(--border)' }}
+            className="btn-secondary"
           >
-            🎲 Spin
+            <IDice size={16} /> {selectedRestaurant ? 'Spin again' : 'Surprise me'}
           </button>
         </div>
         {!restaurants.length && (
-          <p className="text-xs" style={{ color: 'var(--coral)' }}>Add restaurants below before spinning.</p>
+          <p className="text-xs" style={{ color: 'var(--coral)' }}>
+            Add restaurants below before spinning.
+          </p>
         )}
       </div>
 
-      {/* DoorDash URL */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-          DoorDash group order link{' '}
-          <span className="font-normal opacity-50">(optional — paste after creating on DoorDash)</span>
-        </label>
-        <input
-          type="url"
-          value={doordashUrl}
-          onChange={e => setDoordashUrl(e.target.value)}
-          placeholder="https://www.doordash.com/share/..."
-          className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
-          style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
-          onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
-          onBlur={e => (e.target.style.boxShadow = 'none')}
-        />
+      {/* DOORDASH LINK */}
+      <div className="flex flex-col gap-2">
+        <Eyebrow>DoorDash group order</Eyebrow>
+        <div className="input-wrap">
+          <span className="input-icon"><ILink size={16} /></span>
+          <input
+            type="url"
+            value={doordashUrl}
+            onChange={e => setDoordashUrl(e.target.value)}
+            placeholder="https://www.doordash.com/share/…"
+            className="input-base"
+          />
+        </div>
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Optional — paste after creating the group order in DoorDash.
+        </p>
       </div>
 
-      {/* People picker */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-          Who's coming?{' '}
-          {selectedPeople.size > 0 && <span style={{ color: 'var(--cyan)' }}>{selectedPeople.size} selected</span>}
-        </label>
+      {/* CREW */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <Eyebrow>
+            Crew{selectedPeople.size > 0 ? ` · ${selectedPeople.size} of ${users.length}` : ''}
+          </Eyebrow>
+          {selectedPeople.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedPeople(new Set())}
+              className="text-xs"
+              style={{ color: 'var(--text-muted)', background: 'transparent', border: 0, cursor: 'pointer' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {usersLoading ? (
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading workspace members…</p>
+          <UserGridSkeleton />
         ) : (
           <>
-            <input
-              type="text"
-              value={peopleSearch}
-              onChange={e => setPeopleSearch(e.target.value)}
-              placeholder="Search people…"
-              className="w-full rounded-[8px] px-3 py-2 text-sm outline-none transition-shadow"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
-              onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
-              onBlur={e => (e.target.style.boxShadow = 'none')}
-            />
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-              {users
-                .filter(u => {
-                  const q = peopleSearch.toLowerCase();
-                  return !q || u.realName.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q) || u.name.toLowerCase().includes(q);
-                })
-                .map(u => {
-                  const checked = selectedPeople.has(u.id);
-                  return (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => togglePerson(u.id)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-[8px] text-left transition-all hover:opacity-90"
-                      style={{
-                        backgroundColor: checked ? 'rgba(22,163,214,0.15)' : 'var(--bg)',
-                        border: `1px solid ${checked ? 'var(--cyan)' : 'var(--border)'}`,
-                        color: checked ? 'var(--ice)' : '#f0f6fc',
-                      }}
+            <div className="input-wrap">
+              <span className="input-icon"><ISearch size={16} /></span>
+              <input
+                type="text"
+                value={peopleSearch}
+                onChange={e => setPeopleSearch(e.target.value)}
+                placeholder="Search teammates…"
+                className="input-base"
+              />
+            </div>
+
+            {/* Selected chip strip */}
+            {selectedUserList.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedUserList.map(u => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => togglePerson(u.id)}
+                    className="flex items-center gap-2 rounded-full text-[13px] transition-colors"
+                    style={{
+                      background: 'rgba(22, 163, 214, 0.10)',
+                      border: '1px solid rgba(22, 163, 214, 0.40)',
+                      color: 'var(--ice)',
+                      padding: '3px 10px 3px 3px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Avatar user={u} size={22} />
+                    <span>{u.displayName || u.realName}</span>
+                    <IClose size={12} style={{ opacity: 0.6, marginLeft: 2 }} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Avatar grid */}
+            <div
+              className="grid gap-2"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
+            >
+              {filteredUsers.map(u => {
+                const checked = selectedPeople.has(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => togglePerson(u.id)}
+                    className="relative flex flex-col items-center gap-2 rounded-[10px] transition-colors"
+                    style={{
+                      background: checked ? 'rgba(22, 163, 214, 0.08)' : 'var(--bg-1)',
+                      border: `1px solid ${checked ? 'rgba(22, 163, 214, 0.45)' : 'var(--border)'}`,
+                      color: checked ? 'var(--ice)' : 'var(--text)',
+                      padding: '12px 10px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Avatar user={u} size={40} />
+                    <span
+                      className="text-xs font-medium text-center leading-tight truncate w-full"
+                      title={u.realName}
                     >
-                      {u.avatar && <img src={u.avatar} alt="" className="w-5 h-5 rounded-full shrink-0" />}
-                      <span className="truncate text-xs">{u.displayName || u.realName}</span>
-                    </button>
-                  );
-                })}
+                      {u.displayName || u.realName}
+                    </span>
+                    {checked && (
+                      <span
+                        className="absolute flex items-center justify-center"
+                        style={{
+                          top: 6, right: 6, width: 18, height: 18, borderRadius: '50%',
+                          background: 'var(--cyan)', color: '#fff',
+                        }}
+                      >
+                        <ICheck size={11} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {filteredUsers.length === 0 && (
+                <p className="text-sm col-span-full" style={{ color: 'var(--text-muted)' }}>
+                  No matches.
+                </p>
+              )}
             </div>
           </>
         )}
       </div>
 
-      {/* Deadline + Send */}
-      <div className="flex items-end gap-3 pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Order deadline</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="1"
-              max="180"
-              value={deadlineMinutes}
-              onChange={e => setDeadlineMinutes(e.target.value)}
-              className="w-20 rounded-[8px] px-3 py-2 text-sm outline-none"
-              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', color: '#f0f6fc' }}
-              onFocus={e => (e.target.style.boxShadow = '0 0 0 2px var(--cyan)')}
-              onBlur={e => (e.target.style.boxShadow = 'none')}
-            />
-            <span className="text-sm" style={{ color: 'var(--text-muted)' }}>min</span>
+      {/* DEADLINE + SEND */}
+      <div
+        className="flex flex-wrap items-end gap-6 pt-5"
+        style={{ borderTop: '1px solid var(--border-soft)' }}
+      >
+        <div className="flex flex-col gap-2">
+          <Eyebrow>Deadline</Eyebrow>
+          <div className="flex items-center gap-2 flex-wrap">
+            {DEADLINE_PRESETS.map(m => {
+              const active = !deadlineCustom && Number(deadlineMinutes) === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setDeadlineMinutes(m); setDeadlineCustom(false); }}
+                  className="px-3.5 py-2 rounded-[8px] text-sm transition-colors"
+                  style={{
+                    fontFamily: 'Manrope, sans-serif', fontWeight: 600,
+                    background: active ? 'rgba(22,163,214,0.10)' : 'transparent',
+                    border: `1px solid ${active ? 'var(--cyan)' : 'var(--border)'}`,
+                    color: active ? 'var(--ice)' : 'var(--text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {m}m
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setDeadlineCustom(true)}
+              className="px-3.5 py-2 rounded-[8px] text-sm transition-colors"
+              style={{
+                fontFamily: 'Manrope, sans-serif', fontWeight: 600,
+                background: deadlineCustom ? 'rgba(22,163,214,0.10)' : 'transparent',
+                border: `1px dashed ${deadlineCustom ? 'var(--cyan)' : 'var(--border)'}`,
+                color: deadlineCustom ? 'var(--ice)' : 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              Custom…
+            </button>
+            {deadlineCustom && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="180"
+                  value={deadlineMinutes}
+                  onChange={e => setDeadlineMinutes(e.target.value)}
+                  className="input-base"
+                  style={{ width: 80, paddingLeft: 12 }}
+                />
+                <span className="text-sm" style={{ color: 'var(--text-muted)' }}>min</span>
+              </div>
+            )}
           </div>
         </div>
-        <button
-          type="submit"
-          disabled={!canSend || sending}
-          className="text-sm font-semibold px-5 py-2 rounded-[8px] transition-opacity hover:opacity-80 disabled:opacity-40"
-          style={{ backgroundColor: 'var(--cyan)', color: '#fff' }}
-        >
-          {sending ? 'Sending…' : 'Send to Slack →'}
-        </button>
+
+        <div className="ml-auto flex flex-col items-end gap-2">
+          {canSend && (
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Sending to <strong style={{ color: 'var(--text)' }}>{selectedPeople.size} {selectedPeople.size === 1 ? 'person' : 'people'}</strong>
+              {' · '}deadline in <strong style={{ color: 'var(--text)' }}>{deadlineMinutes} min</strong>
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={!canSend || sending}
+            className="btn-primary"
+          >
+            <ISend size={16} /> {sending ? 'Sending…' : 'Send to Slack'}
+          </button>
+        </div>
       </div>
     </form>
+  );
+}
+
+/* ===================== Subcomponents ===================== */
+
+function Step({ n, label, active }) {
+  return (
+    <div
+      className="flex items-center gap-2"
+      style={{ color: active ? 'var(--cyan)' : 'var(--text-dim)' }}
+    >
+      <span
+        className="flex items-center justify-center"
+        style={{
+          width: 22, height: 22, borderRadius: '50%',
+          background: active ? 'rgba(22,163,214,0.12)' : 'transparent',
+          border: `1px solid ${active ? 'var(--cyan)' : 'var(--border)'}`,
+          fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: 11,
+        }}
+      >{n}</span>
+      <span
+        style={{
+          fontFamily: 'Manrope, sans-serif', fontWeight: 600,
+          letterSpacing: '0.02em',
+        }}
+      >{label}</span>
+    </div>
+  );
+}
+
+function StepLine() {
+  return (
+    <div
+      style={{ flex: '0 1 60px', height: 1, background: 'var(--border-soft)' }}
+    />
+  );
+}
+
+function Avatar({ user, size = 36 }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={user.avatar}
+        alt=""
+        style={{
+          width: size, height: size, borderRadius: '50%', objectFit: 'cover',
+          flexShrink: 0,
+        }}
+      />
+    );
+  }
+  const name = user.realName || user.displayName || user.name || '?';
+  const initials = name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+  // deterministic hue from user id
+  let h = 0;
+  for (let i = 0; i < (user.id || name).length; i++) h = (h + (user.id || name).charCodeAt(i) * 7) % 360;
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: size, height: size, borderRadius: '50%',
+        background: `linear-gradient(135deg, hsl(${h}, 55%, 55%), hsl(${(h + 40) % 360}, 55%, 38%))`,
+        color: '#fff',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'Manrope, sans-serif', fontWeight: 700,
+        fontSize: size * 0.38, flexShrink: 0,
+      }}
+    >{initials}</span>
+  );
+}
+
+function UserGridSkeleton() {
+  return (
+    <div
+      className="grid gap-2"
+      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))' }}
+    >
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          style={{
+            background: 'var(--bg-1)', border: '1px solid var(--border)',
+            borderRadius: 10, padding: '12px 10px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+            opacity: 1 - (i * 0.06),
+          }}
+        >
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            background: 'var(--border-soft)',
+          }} />
+          <div style={{
+            width: '70%', height: 10, borderRadius: 4,
+            background: 'var(--border-soft)',
+          }} />
+        </div>
+      ))}
+    </div>
   );
 }

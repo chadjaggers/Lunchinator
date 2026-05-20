@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { deleteRestaurant, updateRestaurant } from '../api';
 import RestaurantForm from './RestaurantForm';
+import Eyebrow from './Eyebrow';
+import { IEdit, ITrash } from './Icons';
 
 export default function RestaurantList({ restaurants, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
@@ -19,51 +21,74 @@ export default function RestaurantList({ restaurants, onRefresh }) {
 
   if (!restaurants.length) {
     return (
-      <p className="text-sm py-2" style={{ color: 'var(--text-muted)' }}>
-        No restaurants yet — add one to get started.
-      </p>
+      <div
+        className="flex flex-col items-center gap-3 py-10 text-center"
+        style={{ color: 'var(--text-muted)' }}
+      >
+        <img
+          src="/burgerlogo.png"
+          alt=""
+          style={{ width: 72, height: 72, opacity: 0.55 }}
+        />
+        <p className="text-sm">
+          The pool is empty. Add a restaurant to start spinning.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col divide-y" style={{ borderColor: 'var(--border)' }}>
-      {restaurants.map(r => (
-        <div key={r.id} className="py-3 first:pt-0 last:pb-0">
+    <div className="flex flex-col">
+      {restaurants.map((r, i) => (
+        <div
+          key={r.id}
+          style={{
+            borderTop: i === 0 ? 'none' : '1px solid var(--border-soft)',
+          }}
+        >
           {editingId === r.id ? (
             <div
-              className="rounded-[8px] p-4"
-              style={{ backgroundColor: 'var(--surface-raised)', border: '1px solid var(--border)' }}
+              className="rounded-[10px] p-4 my-2"
+              style={{
+                background: 'var(--surface-raised)',
+                border: '1px solid var(--border)',
+              }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-muted)' }}>
-                Edit Restaurant
-              </p>
-              <RestaurantForm
-                initial={r}
-                onSave={data => handleEdit(r.id, data)}
-                onCancel={() => setEditingId(null)}
-              />
+              <Eyebrow>Edit restaurant</Eyebrow>
+              <div style={{ marginTop: 10 }}>
+                <RestaurantForm
+                  initial={r}
+                  onSave={data => handleEdit(r.id, data)}
+                  onCancel={() => setEditingId(null)}
+                />
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="font-semibold text-sm truncate" style={{ color: '#f0f6fc' }}>{r.name}</p>
-              </div>
-              <div className="flex gap-4 shrink-0">
+            <div className="flex items-center justify-between gap-4 py-3">
+              <p
+                className="font-medium text-sm truncate"
+                style={{ color: 'var(--text)' }}
+              >
+                {r.name}
+              </p>
+              <div className="flex items-center gap-1 shrink-0">
                 <button
+                  type="button"
                   onClick={() => setEditingId(r.id)}
                   aria-label={`Edit ${r.name}`}
-                  className="text-xs font-medium transition-opacity hover:opacity-70"
-                  style={{ color: 'var(--cyan)' }}
+                  className="btn-ghost"
+                  title="Edit"
                 >
-                  Edit
+                  <IEdit size={16} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDelete(r.id)}
                   aria-label={`Remove ${r.name}`}
-                  className="text-xs font-medium transition-opacity hover:opacity-70"
-                  style={{ color: 'var(--coral)' }}
+                  className="btn-ghost btn-ghost--coral"
+                  title="Remove"
                 >
-                  Remove
+                  <ITrash size={16} />
                 </button>
               </div>
             </div>
