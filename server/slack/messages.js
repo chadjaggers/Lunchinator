@@ -32,7 +32,7 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode, do
         {
           type: 'button',
           action_id: 'rsvp',
-          text: { type: 'plain_text', text: `🙋 I'm in (${rsvpCount})` },
+          text: { type: 'plain_text', text: `✅ I've ordered (${rsvpCount})` },
           value: String(sessionId),
         },
         ...(mode === 'random' ? [{
