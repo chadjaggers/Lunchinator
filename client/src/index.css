@@ -40,7 +40,7 @@ html, body { margin: 0; }
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Manrope', sans-serif;
   -webkit-font-smoothing: antialiased;
   /* Subtle ambient lighting to give the dark page some atmosphere */
   background-image:
@@ -50,6 +50,23 @@ body {
 }
 
 h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; }
+
+/* ---------------------------------------------------------
+   Field label — simpler than Eyebrow; for form-field groups
+   inside panels. No underscore prefix, tighter tracking.
+   --------------------------------------------------------- */
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  line-height: 1;
+}
 
 /* ---------------------------------------------------------
    Inputs — single class, brand-spec focus ring, no inline JS
@@ -64,7 +81,7 @@ h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; }
   padding: 10px 12px;
   font-size: 14px;
   color: var(--text);
-  font-family: 'Sora', sans-serif;
+  font-family: 'Manrope', sans-serif;
   outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
@@ -144,8 +161,39 @@ h1, h2, h3, h4 { font-family: 'Manrope', sans-serif; }
 }
 
 /* ---------------------------------------------------------
-   Reduced motion — turn off the cyan CTA glow animation
+   Skeleton shimmer — loading placeholder animation
+   --------------------------------------------------------- */
+@keyframes shimmer {
+  0% { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
+}
+.skeleton-bone {
+  background: linear-gradient(
+    90deg,
+    var(--border-soft) 25%,
+    var(--border) 50%,
+    var(--border-soft) 75%
+  );
+  background-size: 1600px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* ---------------------------------------------------------
+   Check badge — pop-in when a crew member is selected
+   --------------------------------------------------------- */
+@keyframes pop-in {
+  0%   { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.check-badge {
+  animation: pop-in 0.12s ease-out forwards;
+}
+
+/* ---------------------------------------------------------
+   Reduced motion — disable all animated classes
    --------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .btn-primary, .input-base, .btn-secondary { transition: none; }
+  .skeleton-bone { animation: none; }
+  .check-badge   { animation: none; }
 }

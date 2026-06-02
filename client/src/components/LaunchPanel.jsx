@@ -187,7 +187,7 @@ export default function LaunchPanel({ restaurants, settings }) {
 
       {/* RESTAURANT */}
       <div className="flex flex-col gap-2">
-        <Eyebrow>Restaurant</Eyebrow>
+        <div className="field-label">Restaurant</div>
         <div className="flex items-center gap-3">
           <div className="relative flex-1 input-wrap" ref={dropdownRef}>
             <span className="input-icon"><ISearch size={16} /></span>
@@ -252,7 +252,7 @@ export default function LaunchPanel({ restaurants, settings }) {
 
       {/* DOORDASH LINK */}
       <div className="flex flex-col gap-2">
-        <Eyebrow>DoorDash group order</Eyebrow>
+        <div className="field-label">DoorDash group order</div>
         <div className="input-wrap">
           <span className="input-icon"><ILink size={16} /></span>
           <input
@@ -271,9 +271,9 @@ export default function LaunchPanel({ restaurants, settings }) {
       {/* CREW */}
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-2">
-          <Eyebrow>
+          <div className="field-label">
             Crew{selectedPeople.size > 0 ? ` · ${selectedPeople.size} selected` : ''}
-          </Eyebrow>
+          </div>
           {selectedPeople.size > 0 && (
             <button
               type="button"
@@ -349,9 +349,9 @@ export default function LaunchPanel({ restaurants, settings }) {
                   className="flex items-center gap-2 self-start"
                   style={{ background: 'transparent', border: 0, cursor: 'pointer', padding: 0 }}
                 >
-                  <Eyebrow color="var(--text-muted)">
+                  <span className="field-label" style={{ color: 'var(--text-muted)', cursor: 'pointer' }}>
                     {allCrewExpanded ? '▾' : '▸'} All crew · {allCrewUsers.length} others
-                  </Eyebrow>
+                  </span>
                 </button>
 
                 {allCrewExpanded && (
@@ -384,7 +384,7 @@ export default function LaunchPanel({ restaurants, settings }) {
         style={{ borderTop: '1px solid var(--border-soft)' }}
       >
         <div className="flex flex-col gap-2">
-          <Eyebrow>Deadline</Eyebrow>
+          <div className="field-label">Deadline</div>
           <div className="flex items-center gap-2 flex-wrap">
             {DEADLINE_PRESETS.map(m => {
               const active = !deadlineCustom && Number(deadlineMinutes) === m;
@@ -480,7 +480,7 @@ function UserGrid({ users, selectedPeople, onToggle }) {
             </span>
             {checked && (
               <span
-                className="absolute flex items-center justify-center"
+                className="check-badge absolute flex items-center justify-center"
                 style={{ top: 6, right: 6, width: 18, height: 18, borderRadius: '50%', background: 'var(--cyan)', color: '#fff' }}
               >
                 <ICheck size={11} />
@@ -558,8 +558,8 @@ function UserGridSkeleton() {
             opacity: 1 - (i * 0.06),
           }}
         >
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--border-soft)' }} />
-          <div style={{ width: '70%', height: 10, borderRadius: 4, background: 'var(--border-soft)' }} />
+          <div className="skeleton-bone" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+          <div className="skeleton-bone" style={{ width: '70%', height: 10, borderRadius: 4 }} />
         </div>
       ))}
     </div>

@@ -104,13 +104,7 @@ export default function App() {
             >
               Where are we<br />
               <span style={{ fontWeight: 800 }}>eating</span>{' '}
-              <span
-                style={{
-                  background: 'linear-gradient(90deg, #9AE4FF 0%, #16A3D6 50%, #1A386F 100%)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  fontWeight: 800,
-                }}
-              >today_</span>
+              <span style={{ fontWeight: 800, color: 'var(--ice)' }}>today_</span>
             </h1>
             <p
               style={{

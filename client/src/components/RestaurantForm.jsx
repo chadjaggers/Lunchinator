@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Eyebrow from './Eyebrow';
 
 export default function RestaurantForm({ initial = {}, onSave, onCancel }) {
   const [name, setName] = useState(initial.name || '');
@@ -12,9 +11,9 @@ export default function RestaurantForm({ initial = {}, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <Eyebrow>
+        <div className="field-label">
           Name <span style={{ color: 'var(--coral)' }}>*</span>
-        </Eyebrow>
+        </div>
         <input
           required
           value={name}
