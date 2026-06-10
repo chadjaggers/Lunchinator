@@ -8,7 +8,7 @@ A Slack bot that takes the "where should we eat?" debate off the table. Pick a r
 
 ### From the admin panel (recommended)
 
-1. Open the admin panel at `http://localhost:3000`
+1. Open the admin panel at `https://lunchinator-production.up.railway.app/`
 2. Pick a restaurant from the dropdown, or hit **Surprise me** for a random spin
 3. Paste the DoorDash group order link (optional — can be added later)
 4. Set an order deadline (or use the default)
