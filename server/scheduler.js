@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { getDb } = require('./db');
-const { buildLunchCard } = require('./slack/messages');
+const { buildLunchCard, parseJsonOrArray } = require('./slack/messages');
 
 function startScheduler(slackClient) {
   cron.schedule('* * * * *', async () => {
@@ -21,15 +21,19 @@ function startScheduler(slackClient) {
       for (const session of active) {
         const rsvpCount = db.prepare('SELECT COUNT(*) as count FROM rsvps WHERE session_id = ?').get(session.id).count;
         const restaurant = { name: session.name, cuisine: session.cuisine };
-        try {
-          await slackClient.chat.update({
-            channel: session.slack_channel_id,
-            ts: session.slack_message_ts,
-            blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId: session.id, mode: session.mode, doordashUrl: session.doordash_url }),
-            text: `Today's lunch: ${session.name}`,
-          });
-        } catch {
-          // Message may have been deleted — skip silently
+        const channels = parseJsonOrArray(session.slack_channel_id);
+        const tss = parseJsonOrArray(session.slack_message_ts);
+        for (let i = 0; i < channels.length; i++) {
+          try {
+            await slackClient.chat.update({
+              channel: channels[i],
+              ts: tss[i],
+              blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId: session.id, mode: session.mode, doordashUrl: session.doordash_url }),
+              text: `Today's lunch: ${session.name}`,
+            });
+          } catch {
+            // Message may have been deleted — skip silently
+          }
         }
       }
 
@@ -47,12 +51,14 @@ function startScheduler(slackClient) {
 
       for (const session of soonExpiring) {
         db.prepare('UPDATE lunch_sessions SET reminder_sent_at = ? WHERE id = ?').run(now, session.id);
-        try {
-          await slackClient.chat.postMessage({
-            channel: session.slack_channel_id,
-            text: `<!here> ⏰ *5 minutes left* to get your order in for *${session.name}*! Place your order now 🍽️`,
-          });
-        } catch {}
+        for (const channelId of parseJsonOrArray(session.slack_channel_id)) {
+          try {
+            await slackClient.chat.postMessage({
+              channel: channelId,
+              text: `<!here> ⏰ *5 minutes left* to get your order in for *${session.name}*! Place your order now 🍽️`,
+            });
+          } catch {}
+        }
       }
 
       // Sessions past deadline that haven't been notified yet
@@ -68,13 +74,15 @@ function startScheduler(slackClient) {
       for (const session of expired) {
         // Mark as notified FIRST to prevent re-send on error
         db.prepare('UPDATE lunch_sessions SET times_up_sent_at = ? WHERE id = ?').run(now, session.id);
-        try {
-          await slackClient.chat.postMessage({
-            channel: session.slack_channel_id,
-            text: `⏰ Order deadline for *${session.name}* has passed! Hope everyone got their order in 🍽️`,
-          });
-        } catch {
-          // Channel may no longer be accessible
+        for (const channelId of parseJsonOrArray(session.slack_channel_id)) {
+          try {
+            await slackClient.chat.postMessage({
+              channel: channelId,
+              text: `⏰ Order deadline for *${session.name}* has passed! Hope everyone got their order in 🍽️`,
+            });
+          } catch {
+            // Channel may no longer be accessible
+          }
         }
       }
     } catch (err) {

@@ -1,5 +1,5 @@
 const { getDb } = require('../db');
-const { buildLunchCard } = require('./messages');
+const { buildLunchCard, parseJsonOrArray } = require('./messages');
 
 function registerActions(app) {
   app.action('rsvp', async ({ ack, action, body, client }) => {
@@ -21,13 +21,17 @@ function registerActions(app) {
       const restaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(session.restaurant_id);
       if (!restaurant) return;
       const rsvpCount = db.prepare('SELECT COUNT(*) as count FROM rsvps WHERE session_id = ?').get(sessionId).count;
+      const channels = parseJsonOrArray(session.slack_channel_id);
+      const tss = parseJsonOrArray(session.slack_message_ts);
 
-      await client.chat.update({
-        channel: session.slack_channel_id,
-        ts: session.slack_message_ts,
-        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId, mode: session.mode, doordashUrl: session.doordash_url }),
-        text: `Today's lunch: ${restaurant.name}`,
-      });
+      for (let i = 0; i < channels.length; i++) {
+        await client.chat.update({
+          channel: channels[i],
+          ts: tss[i],
+          blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount, sessionId, mode: session.mode, doordashUrl: session.doordash_url }),
+          text: `Today's lunch: ${restaurant.name}`,
+        });
+      }
     } catch (err) {
       console.error('rsvp action error:', err);
     }
@@ -44,10 +48,12 @@ function registerActions(app) {
       // Pick a different restaurant
       const rows = db.prepare('SELECT * FROM restaurants WHERE id != ?').all(session.restaurant_id);
       if (!rows.length) {
-        await client.chat.postMessage({
-          channel: session.slack_channel_id,
-          text: "There's only one restaurant in the list — can't spin again! Add more restaurants with `/lunchinator add`.",
-        });
+        for (const channelId of parseJsonOrArray(session.slack_channel_id)) {
+          await client.chat.postMessage({
+            channel: channelId,
+            text: "There's only one restaurant in the list — can't spin again! Add more restaurants with `/lunchinator add`.",
+          });
+        }
         return;
       }
       const restaurant = rows[Math.floor(Math.random() * rows.length)];
@@ -56,12 +62,16 @@ function registerActions(app) {
       db.prepare('UPDATE lunch_sessions SET restaurant_id = ?, doordash_url = NULL WHERE id = ?').run(restaurant.id, sessionId);
       db.prepare('DELETE FROM rsvps WHERE session_id = ?').run(sessionId);
 
-      await client.chat.update({
-        channel: session.slack_channel_id,
-        ts: session.slack_message_ts,
-        blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount: 0, sessionId, mode: 'random', doordashUrl: null }),
-        text: `Today's lunch: ${restaurant.name}`,
-      });
+      const channels = parseJsonOrArray(session.slack_channel_id);
+      const tss = parseJsonOrArray(session.slack_message_ts);
+      for (let i = 0; i < channels.length; i++) {
+        await client.chat.update({
+          channel: channels[i],
+          ts: tss[i],
+          blocks: buildLunchCard({ restaurant, deadlineAt: session.deadline_at, rsvpCount: 0, sessionId, mode: 'random', doordashUrl: null }),
+          text: `Today's lunch: ${restaurant.name}`,
+        });
+      }
     } catch (err) {
       console.error('spin_again action error:', err);
     }

@@ -1,6 +1,15 @@
 const express = require('express');
 const { buildLunchCard } = require('../slack/messages');
 
+// Slack MPDMs cap at 8 members total (including the bot).
+const SLACK_DM_MAX = 7;
+
+function chunkArray(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
 function buildRouter(db, slackClient) {
   const router = express.Router();
 
@@ -138,24 +147,34 @@ function buildRouter(db, slackClient) {
       const deadlineAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
       const mode = restaurantId ? 'manual' : 'random';
 
-      const convResult = await slackClient.conversations.open({ users: attendeeIds.join(',') });
-      const channelId = convResult.channel.id;
+      // Open one group DM per chunk of up to SLACK_DM_MAX people
+      const chunks = chunkArray(attendeeIds, SLACK_DM_MAX);
+      const channelIds = [];
+      for (const chunk of chunks) {
+        const convResult = await slackClient.conversations.open({ users: chunk.join(',') });
+        channelIds.push(convResult.channel.id);
+      }
 
       // POC: first attendee used as organizer — production needs a real admin Slack user ID from settings
       const result = db.prepare(`
         INSERT INTO lunch_sessions (restaurant_id, organizer_slack_id, attendee_slack_ids, mode, deadline_at, doordash_url, slack_channel_id)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(restaurant.id, attendeeIds[0], JSON.stringify(attendeeIds), mode, deadlineAt, doordashUrl || null, channelId);
+      `).run(restaurant.id, attendeeIds[0], JSON.stringify(attendeeIds), mode, deadlineAt, doordashUrl || null, JSON.stringify(channelIds));
 
       const sessionId = result.lastInsertRowid;
 
-      const msgResult = await slackClient.chat.postMessage({
-        channel: channelId,
-        blocks: buildLunchCard({ restaurant, deadlineAt, rsvpCount: 0, sessionId, mode, doordashUrl: doordashUrl || null }),
-        text: `Today's lunch: ${restaurant.name}`,
-      });
+      // Send the same lunch card to every group DM
+      const messageTss = [];
+      for (const channelId of channelIds) {
+        const msgResult = await slackClient.chat.postMessage({
+          channel: channelId,
+          blocks: buildLunchCard({ restaurant, deadlineAt, rsvpCount: 0, sessionId, mode, doordashUrl: doordashUrl || null }),
+          text: `Today's lunch: ${restaurant.name}`,
+        });
+        messageTss.push(msgResult.ts);
+      }
 
-      db.prepare('UPDATE lunch_sessions SET slack_message_ts = ? WHERE id = ?').run(msgResult.ts, sessionId);
+      db.prepare('UPDATE lunch_sessions SET slack_message_ts = ? WHERE id = ?').run(JSON.stringify(messageTss), sessionId);
 
       res.json({ sessionId, restaurant });
     } catch (err) {

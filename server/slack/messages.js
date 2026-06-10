@@ -51,4 +51,16 @@ function buildLunchCard({ restaurant, deadlineAt, rsvpCount, sessionId, mode, do
   return blocks;
 }
 
-module.exports = { buildLunchCard, formatDeadline };
+// Parse a slack_channel_id or slack_message_ts column that may be either a
+// plain string (legacy single-channel sessions) or a JSON array (multi-group).
+function parseJsonOrArray(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [value];
+  }
+}
+
+module.exports = { buildLunchCard, formatDeadline, parseJsonOrArray };
