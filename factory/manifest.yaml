@@ -1,0 +1,24 @@
+schema_version: 1
+engagement:
+  id: ENG-chad-inc-01
+  client: Chad Inc.
+  name: Lunchinator
+  type: existing_codebase
+  repo: github.com/chadjaggers/Lunchinator
+  tracker:
+    system: jira
+    project: lunch
+  stage: prototype
+  updated: 2026-07-08
+  domain_family: customer_services
+  disabled_steps:
+    - discovery_docs
+    - requirements_draft
+    - gate1
+    - jira_push
+discovery_sources: []
+requirements: []
+system_context:
+  - id: SYS-001
+    kind: codebase
+    ref: github.com/chadjaggers/Lunchinator
